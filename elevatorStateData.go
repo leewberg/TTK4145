@@ -32,7 +32,7 @@ var mutexESD sync.RWMutex
 func initElevatorData() {
 	mutexESD.Lock()
 	defer mutexESD.Unlock()
-	for i := 0; i < NUM_ELEVATORS; i++ {
+	for i := range NUM_ELEVATORS {
 		allElevatorsData[i] = ElevatorData{last_floor: -1, state: BOOT, direction: STOP, data_version: 0}
 	}
 }

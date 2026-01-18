@@ -11,7 +11,7 @@ func initFunctionalTimes() {
 	mutexLFT.Lock()
 	defer mutexLFT.Unlock()
 
-	for i := 0; i < NUM_ELEVATORS; i++ {
+	for i := range NUM_ELEVATORS {
 		lastFunctionalTimes[i] = 0
 	}
 }
