@@ -7,7 +7,7 @@ import (
 
 type elev_states int
 
-const (
+const ( //TODO: use iota here
 	ELEV_BOOT      elev_states = 1
 	ELEV_IDLE      elev_states = 2
 	ELEV_RUNNING   elev_states = 3
@@ -43,6 +43,7 @@ func (e *Elevator) elev_open_door() {
 	e.state = ELEV_IDLE
 	SetDoorOpenLamp(false)
 	//missing: transition to stop state
+	//missing: turn off order lights (cab and direction)
 }
 
 func (e *Elevator) elev_run() {
@@ -52,6 +53,7 @@ func (e *Elevator) elev_run() {
 }
 
 func (e *Elevator) elev_stop() {
+	SetStopLamp(true)
 	//check if stop button is pushed in
 	//once released, check if in floor. if so, enter open_door state. if not, go to nearest floor in direction it was headed and enter open door state before continuing
 }
@@ -90,3 +92,33 @@ func (e *Elevator) get_behaviour() elev_states {
 func (e *Elevator) get_direction() MotorDirection {
 	return e.direction
 }
+
+/*
+pending functions:
+	func (e *Elevator) viable_floor() bool
+		takes in elevator object and it's current floor, and checks it against the allOrders-matrix (as defined in database module), to see if the current floor either has an up-order and/or a cab-order. if it does, it enters the door-open state
+
+	func (e *Elevator) check_turn()
+		checks the remaining floors in it's direction (so all floors above it if it's going up, all below if down.) in the larger allOrdersData matrix. if it sees that there's no viable orders above it (or below it. whatever), it'll turn. if not, it continues in stated direction
+		can use a for-loop and viable_floor() function for this
+		can use function readOrderData(orderType, orderFloor) for this. it returns an orderData object with attribute assigned_to, which tells if its assigned to us or not
+		can also use orderVersion2State(order_version_nr int) OrderState for this. tells us if it's [CLEAR, REQUESTED, CONFIRMED]
+
+	func (e *Elevator) enable_stop()
+		seperate routine that checks if the stop button is pushed in or not. if it is, the elevator immediately transitions to the stop-state
+
+	func (e *Elevator) send_order()
+		whenever an elevator detects an order, it'll send it to the allOrdersData matrix with floor and ordertype-.info. sends also own ID
+		|| whoopsie can use request
+
+	func (e *Elevator) clear_order()
+		whenever an elevator finishes an order, it sends a message to the data-matrix that the order is finished before turning off the lights || whoopsie already made. from database-module: clearOrder(orderType OrderType, orderFloor OrderType)
+
+	func (e *Elevator) send_update()
+		sends update of worldview into the void. need network module to finish / know how to struct
+
+notes to self
+	allOrdersData[ordeType][orderFloor]
+
+	if we get performance issues wrt. checking the performance matrix while in the floor, i can add an extra class atribute which tells the elevator if it's supposed to stop in the next floor or not.
+*/
