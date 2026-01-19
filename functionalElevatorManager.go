@@ -30,7 +30,7 @@ func readElevatorFunctional(elevatorNum int) int64 {
 	return lastFunctionalTimes[elevatorNum]
 }
 
-func mergeExternalElevFunctionalData(elevatorNum int, value int64) {
+func mergeElevFunctionalData(elevatorNum int, value int64) {
 	mutexLFT.Lock()
 	defer mutexLFT.Unlock()
 

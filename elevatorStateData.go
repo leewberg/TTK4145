@@ -67,4 +67,5 @@ func setElevData(elevatorNum int, newData ElevatorData) {
 	defer mutexESD.Unlock()
 
 	allElevatorsData[elevatorNum] = newData
+	allElevatorsData[elevatorNum].data_version += 1
 }
