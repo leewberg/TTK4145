@@ -7,12 +7,12 @@ import (
 
 type elev_states int
 
-const ( //TODO: use iota here
-	ELEV_BOOT      elev_states = 1
-	ELEV_IDLE      elev_states = 2
-	ELEV_RUNNING   elev_states = 3
-	ELEV_STOP      elev_states = 4
-	ELEV_DOOR_OPEN elev_states = 5
+const (
+	ELEV_BOOT elev_states = iota
+	ELEV_IDLE
+	ELEV_RUNNING
+	ELEV_STOP
+	ELEV_DOOR_OPEN
 )
 
 type Elevator struct {
