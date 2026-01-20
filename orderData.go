@@ -8,9 +8,9 @@ type OrderState int
 type OrderType int
 
 const (
-	CLEAR OrderState = iota
-	REQUESTED
-	CONFIRMED
+	ORDER_CLEAR OrderState = iota
+	ORDER_REQUESTED
+	ORDER_CONFIRMED
 )
 
 const (
@@ -24,7 +24,7 @@ const (
 type OrderData struct {
 	version_nr int // contains state info
 
-	// only relevant for confirmed state
+	// only relevant in confirmed state
 	assigned_to   int
 	assigned_cost int
 }
@@ -32,13 +32,13 @@ type OrderData struct {
 var allOrdersData map[OrderType][]OrderData
 var mutexOD sync.RWMutex
 
-func orderVersion2State(order_version_nr int) OrderState {
+func stateFromVersionNr(order_version_nr int) OrderState {
 	if order_version_nr%3 == 0 {
-		return CLEAR
+		return ORDER_CLEAR
 	} else if order_version_nr%3 == 1 {
-		return REQUESTED
+		return ORDER_REQUESTED
 	} else {
-		return CONFIRMED
+		return ORDER_CONFIRMED
 	}
 }
 
@@ -59,7 +59,7 @@ func requestOrder(orderType OrderType, orderFloor OrderType) {
 	mutexOD.Lock()
 	defer mutexOD.Unlock()
 
-	if orderVersion2State(allOrdersData[orderType][orderFloor].version_nr) == CLEAR {
+	if stateFromVersionNr(allOrdersData[orderType][orderFloor].version_nr) == ORDER_CLEAR {
 		allOrdersData[orderType][orderFloor].version_nr += 1
 	}
 }
@@ -68,7 +68,7 @@ func clearOrder(orderType OrderType, orderFloor OrderType) {
 	mutexOD.Lock()
 	defer mutexOD.Unlock()
 
-	if orderVersion2State(allOrdersData[orderType][orderFloor].version_nr) == CONFIRMED {
+	if stateFromVersionNr(allOrdersData[orderType][orderFloor].version_nr) == ORDER_CONFIRMED {
 		allOrdersData[orderType][orderFloor].version_nr += 1
 	}
 }
@@ -88,9 +88,9 @@ func mergeOrder(orderType OrderType, orderFloor OrderType, mergeData OrderData) 
 	if mergeData.version_nr > currentOrder.version_nr {
 
 		// Stubbornnes clause: you should not externally clear an order assigned to this node
-		if orderVersion2State(currentOrder.version_nr) == CONFIRMED &&
+		if stateFromVersionNr(currentOrder.version_nr) == ORDER_CONFIRMED &&
 			currentOrder.assigned_to == MY_ID &&
-			orderVersion2State(mergeData.version_nr) != CONFIRMED {
+			stateFromVersionNr(mergeData.version_nr) != ORDER_CONFIRMED {
 
 			allOrdersData[orderType][orderFloor].version_nr = mergeData.version_nr + (2 - mergeData.version_nr%3)
 
@@ -99,9 +99,9 @@ func mergeOrder(orderType OrderType, orderFloor OrderType, mergeData OrderData) 
 		}
 
 	} else if mergeData.version_nr == currentOrder.version_nr &&
-		orderVersion2State(mergeData.version_nr) == CONFIRMED {
+		stateFromVersionNr(mergeData.version_nr) == ORDER_CONFIRMED {
 
-		// Lowest cost gets the order
+		// Lowest cost gets the order, ensuring uniformity
 		if currentOrder.assigned_cost > mergeData.assigned_cost {
 
 			allOrdersData[orderType][orderFloor] = mergeData

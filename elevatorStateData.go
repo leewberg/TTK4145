@@ -6,17 +6,17 @@ type Direction int
 type ElevState int
 
 const (
-	STOP Direction = iota
-	DOWN
-	UP
+	DIR_STOP Direction = iota
+	DIR_DOWN
+	DIR_UP
 )
 
 const (
-	BOOT ElevState = iota
-	STOPBTN
-	IDLE
-	RUNNING
-	DOOR_OPEN
+	STATE_BOOT ElevState = iota
+	STATE_STOP
+	STATE_IDLE
+	STATE_RUNNING
+	STATE_DOOR_OPEN
 )
 
 type ElevatorData struct {
@@ -33,7 +33,7 @@ func initElevatorData() {
 	mutexESD.Lock()
 	defer mutexESD.Unlock()
 	for i := range NUM_ELEVATORS {
-		allElevatorsData[i] = ElevatorData{last_floor: -1, state: BOOT, direction: STOP, data_version: 0}
+		allElevatorsData[i] = ElevatorData{last_floor: -1, state: STATE_BOOT, direction: DIR_STOP, data_version: 0}
 	}
 }
 
