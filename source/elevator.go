@@ -16,11 +16,12 @@ const (
 )
 
 type Elevator struct {
-	state      elev_states
-	in_floor   int
-	ID         int
-	network_ID string
-	direction  MotorDirection
+	state       elev_states
+	in_floor    int
+	ID          int
+	network_ID  string
+	direction   MotorDirection
+	initialized bool
 }
 
 func (e *Elevator) Init(ID int, network_ID string) {
@@ -28,6 +29,7 @@ func (e *Elevator) Init(ID int, network_ID string) {
 	SetMotorDirection(e.direction)
 	e.ID = ID
 	//check other elevators if they're awake.
+	//this can be a for loop, so that all elevators are always checking if they need to be initialized or not. this allows for an elevator to die and come back again (wow, jesus parallell) without the system being rebooted
 	//go to bottom floor
 	SetDoorOpenLamp(false)
 	SetStopLamp(false)
@@ -42,7 +44,6 @@ func (e *Elevator) elev_open_door() {
 	time.Sleep(3 * time.Second)
 	e.state = ELEV_IDLE
 	SetDoorOpenLamp(false)
-	//missing: transition to stop state
 	//missing: turn off order lights (cab and direction)
 }
 
@@ -79,6 +80,11 @@ func (e *Elevator) elev_routine() {
 			e.elev_stop()
 		}
 	}
+}
+
+func (e *Elevator) hability_rouitine() {
+	//checks if elevator is alive every x seconds
+
 }
 
 func (e *Elevator) get_current_floor() int {

@@ -48,6 +48,7 @@ func main() {
 			}
 
 		case a := <-drv_stop:
+			//set state as stop for applicable elevator
 			fmt.Printf("%+v\n", a)
 			for f := 0; f < numFloors; f++ {
 				for b := elevio.ButtonType(0); b < 3; b++ {
