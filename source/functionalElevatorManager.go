@@ -1,7 +1,9 @@
-package main
+package elevio
 
-import "time"
-import "sync"
+import (
+	"sync"
+	"time"
+)
 
 // Module to keep track of the last known functional times of all elevators
 var lastFunctionalTimes [NUM_ELEVATORS]int64

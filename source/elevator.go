@@ -25,9 +25,9 @@ type Elevator struct {
 }
 
 func (e *Elevator) Init(ID int, network_ID string) {
-	e.direction = MD_Stop
 	SetMotorDirection(e.direction)
 	e.ID = ID
+	e.network_ID = network_ID
 	//check other elevators if they're awake.
 	//this can be a for loop, so that all elevators are always checking if they need to be initialized or not. this allows for an elevator to die and come back again (wow, jesus parallell) without the system being rebooted
 	//go to bottom floor
@@ -50,7 +50,7 @@ func (e *Elevator) elev_open_door() {
 func (e *Elevator) elev_run() {
 	//go through order matrix. if any eligeble order, set motor direction and continue
 	//if no new orders: enter idle-mode
-	//
+	//update e.in_floor
 }
 
 func (e *Elevator) elev_stop() {
@@ -87,6 +87,38 @@ func (e *Elevator) hability_rouitine() {
 
 }
 
+func (e *Elevator) viable_floor(floor int) bool {
+	order_dir := readOrderData((OrderType(e.direction)), floor)
+	order_cab := readOrderData(OrderType(1+e.ID), floor)
+
+	if (stateFromVersionNr(order_dir.version_nr) == ORDER_CONFIRMED && order_dir.assigned_to == e.ID) || (stateFromVersionNr(order_cab.version_nr) == ORDER_CONFIRMED && order_cab.assigned_to == e.ID) {
+		//very messy, but it checks if the order is viable by first checking if the order is confirmed and is assigned to the elevator
+		return true
+	}
+	return false
+}
+
+func (e *Elevator) check_turn() {
+	switch e.direction {
+	case MD_Up:
+		for i := e.in_floor; i < NUM_FLOORS; i++ {
+			if e.viable_floor(i) {
+				//if any of the floors above are viable
+				break
+			}
+		}
+		e.direction = MD_Down
+	case MD_Down:
+		for i := e.in_floor; i >= 0; i-- {
+			if e.viable_floor(i) {
+				//if any of the floors below are viable
+				break
+			}
+		}
+		e.direction = MD_Up
+	}
+}
+
 func (e *Elevator) get_current_floor() int {
 	return e.in_floor
 }
@@ -101,24 +133,12 @@ func (e *Elevator) get_direction() MotorDirection {
 
 /*
 pending functions:
-	func (e *Elevator) viable_floor() bool
-		takes in elevator object and it's current floor, and checks it against the allOrders-matrix (as defined in database module), to see if the current floor either has an up-order and/or a cab-order. if it does, it enters the door-open state
-
-	func (e *Elevator) check_turn()
-		checks the remaining floors in it's direction (so all floors above it if it's going up, all below if down.) in the larger allOrdersData matrix. if it sees that there's no viable orders above it (or below it. whatever), it'll turn. if not, it continues in stated direction
-		can use a for-loop and viable_floor() function for this
-		can use function readOrderData(orderType, orderFloor) for this. it returns an orderData object with attribute assigned_to, which tells if its assigned to us or not
-		can also use orderVersion2State(order_version_nr int) OrderState for this. tells us if it's [CLEAR, REQUESTED, CONFIRMED]
-
-	func (e *Elevator) enable_stop()
+	func (e *Elevator) enable_stop() redundant
 		seperate routine that checks if the stop button is pushed in or not. if it is, the elevator immediately transitions to the stop-state
 
 	func (e *Elevator) send_order()
 		whenever an elevator detects an order, it'll send it to the allOrdersData matrix with floor and ordertype-.info. sends also own ID
 		|| whoopsie can use request
-
-	func (e *Elevator) clear_order()
-		whenever an elevator finishes an order, it sends a message to the data-matrix that the order is finished before turning off the lights || whoopsie already made. from database-module: clearOrder(orderType OrderType, orderFloor OrderType)
 
 	func (e *Elevator) send_update()
 		sends update of worldview into the void. need network module to finish / know how to struct

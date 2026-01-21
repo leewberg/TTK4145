@@ -1,4 +1,4 @@
-package main
+package elevio
 
 func orderCost(orderType OrderType, orderFloor int, elevID int) int {
 	// finds the cost for elevator e to do order o
