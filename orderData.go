@@ -55,7 +55,7 @@ func initOrderData() {
 
 }
 
-func requestOrder(orderType OrderType, orderFloor OrderType) {
+func requestOrder(orderType OrderType, orderFloor int) {
 	mutexOD.Lock()
 	defer mutexOD.Unlock()
 
@@ -64,7 +64,7 @@ func requestOrder(orderType OrderType, orderFloor OrderType) {
 	}
 }
 
-func clearOrder(orderType OrderType, orderFloor OrderType) {
+func clearOrder(orderType OrderType, orderFloor int) {
 	mutexOD.Lock()
 	defer mutexOD.Unlock()
 
@@ -73,13 +73,33 @@ func clearOrder(orderType OrderType, orderFloor OrderType) {
 	}
 }
 
-func readOrderData(orderType OrderType, orderFloor OrderType) OrderData {
+func readOrderData(orderType OrderType, orderFloor int) OrderData {
 	mutexOD.RLock()
 	defer mutexOD.Unlock()
 	return allOrdersData[orderType][orderFloor]
 }
 
-func mergeOrder(orderType OrderType, orderFloor OrderType, mergeData OrderData) {
+func assignOrder(orderType OrderType, orderFloor int, assignTo int, cost int) {
+	mutexOD.Lock()
+	defer mutexOD.Unlock()
+
+	if stateFromVersionNr(allOrdersData[orderType][orderFloor].version_nr) == ORDER_REQUESTED {
+		allOrdersData[orderType][orderFloor].version_nr += 1
+		allOrdersData[orderType][orderFloor].assigned_cost = cost
+		allOrdersData[orderType][orderFloor].assigned_to = assignTo
+
+	} else if stateFromVersionNr(allOrdersData[orderType][orderFloor].version_nr) == ORDER_CONFIRMED {
+		functionalElevators := getFunctionalElevators()
+
+		if !functionalElevators[allOrdersData[orderType][orderFloor].assigned_to] {
+
+			allOrdersData[orderType][orderFloor].assigned_cost = cost
+			allOrdersData[orderType][orderFloor].assigned_to = assignTo
+		}
+	}
+}
+
+func mergeOrder(orderType OrderType, orderFloor int, mergeData OrderData) {
 	mutexOD.Lock()
 	defer mutexOD.Unlock()
 

@@ -36,3 +36,22 @@ func mergeElevFunctionalData(elevatorNum int, value int64) {
 
 	lastFunctionalTimes[elevatorNum] = max(lastFunctionalTimes[elevatorNum], value)
 }
+
+func getFunctionalElevators() []bool {
+	mutexLFT.RLock()
+	defer mutexLFT.Unlock()
+
+	now := time.Now().UnixMilli()
+	funcElevs := make([]bool, NUM_ELEVATORS)
+
+	for elevID := range NUM_ELEVATORS {
+		if now-lastFunctionalTimes[elevID] > ELEVATOR_TIMEOUT {
+			funcElevs[elevID] = false
+		} else {
+
+			funcElevs[elevID] = true
+		}
+	}
+
+	return funcElevs
+}
