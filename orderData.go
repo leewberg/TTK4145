@@ -42,6 +42,16 @@ func stateFromVersionNr(order_version_nr int) OrderState {
 	}
 }
 
+func computeFullCost(orderData OrderData) float64 {
+	cost := float64(orderData.assigned_cost)
+	functionalElevators := getFunctionalElevators()
+	if !functionalElevators[orderData.assigned_to] {
+		cost += INF
+	}
+	cost += 0.01 * float64(orderData.assigned_to) // use ID for tiebreaks
+	return cost
+}
+
 func initOrderData() {
 	mutexOD.Lock()
 	defer mutexOD.Unlock()
@@ -89,9 +99,9 @@ func assignOrder(orderType OrderType, orderFloor int, assignTo int, cost int) {
 		allOrdersData[orderType][orderFloor].assigned_to = assignTo
 
 	} else if stateFromVersionNr(allOrdersData[orderType][orderFloor].version_nr) == ORDER_CONFIRMED {
-		functionalElevators := getFunctionalElevators()
+		isElevFunctional := getFunctionalElevators()
 
-		if !functionalElevators[allOrdersData[orderType][orderFloor].assigned_to] {
+		if !isElevFunctional[allOrdersData[orderType][orderFloor].assigned_to] {
 
 			allOrdersData[orderType][orderFloor].assigned_cost = cost
 			allOrdersData[orderType][orderFloor].assigned_to = assignTo
@@ -121,17 +131,13 @@ func mergeOrder(orderType OrderType, orderFloor int, mergeData OrderData) {
 	} else if mergeData.version_nr == currentOrder.version_nr &&
 		stateFromVersionNr(mergeData.version_nr) == ORDER_CONFIRMED {
 
-		// Lowest cost gets the order, ensuring uniformity
-		if currentOrder.assigned_cost > mergeData.assigned_cost {
+		currentCost := computeFullCost(currentOrder)
+		incomingCost := computeFullCost(mergeData)
 
+		if currentCost > incomingCost {
 			allOrdersData[orderType][orderFloor] = mergeData
-
-		} else if currentOrder.assigned_cost == mergeData.assigned_cost {
-
-			// Elevator id is the tiebreaker
-			if currentOrder.assigned_to > mergeData.assigned_to {
-				allOrdersData[orderType][orderFloor] = mergeData
-			}
 		}
+		// is there a chance that reassignment messes with the stubbornness?
+
 	}
 }

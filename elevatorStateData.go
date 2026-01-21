@@ -5,10 +5,10 @@ import "sync"
 type Direction int
 type ElevState int
 
+// note: ensure the order matches with the HALL_UP/HALL_DOWN enum
 const (
-	DIR_STOP Direction = iota
-	DIR_DOWN
-	DIR_UP
+	DIR_UP   Direction = 1
+	DIR_DOWN Direction = -1
 )
 
 const (
@@ -33,7 +33,7 @@ func initElevatorData() {
 	mutexESD.Lock()
 	defer mutexESD.Unlock()
 	for i := range NUM_ELEVATORS {
-		allElevatorsData[i] = ElevatorData{last_floor: -1, state: STATE_BOOT, direction: DIR_STOP, data_version: 0}
+		allElevatorsData[i] = ElevatorData{last_floor: -1, state: STATE_BOOT, direction: DIR_UP, data_version: 0}
 	}
 }
 
@@ -43,8 +43,8 @@ func mergeElevatorData(elevatorNum int, newData ElevatorData) {
 	defer mutexESD.Unlock()
 
 	if elevatorNum != MY_ID {
-		if allElevatorsData[MY_ID].data_version <= newData.data_version {
-			allElevatorsData[MY_ID] = newData
+		if allElevatorsData[elevatorNum].data_version <= newData.data_version {
+			allElevatorsData[elevatorNum] = newData
 		}
 
 	} else {
@@ -62,10 +62,10 @@ func getElevData(elevatorNum int) ElevatorData {
 	return allElevatorsData[elevatorNum]
 }
 
-func setElevData(elevatorNum int, newData ElevatorData) {
+func setElevData(newData ElevatorData) {
 	mutexESD.Lock()
 	defer mutexESD.Unlock()
 
-	allElevatorsData[elevatorNum] = newData
-	allElevatorsData[elevatorNum].data_version += 1
+	allElevatorsData[MY_ID] = newData
+	allElevatorsData[MY_ID].data_version += 1
 }
