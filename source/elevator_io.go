@@ -35,7 +35,7 @@ type ButtonEvent struct {
 	Button ButtonType
 }
 
-func Init(addr string, numFloors int) {
+func Init(addr string, numFloors int) { //may need to change - initiated for tcp-communication
 	if _initialized {
 		fmt.Println("Driver already initialized!")
 		return

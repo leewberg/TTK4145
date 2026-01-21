@@ -2,13 +2,6 @@ package elevio
 
 /*
 TODO:
-	finish init-function
-	finish run-function
-	finish door_open function
-	finish idle-functionS
-	finish hability_rouitine
-	expand on get-direction
-
 	rename variables and functions to camelCase
 */
 
@@ -41,9 +34,16 @@ type Elevator struct {
 func (e *Elevator) Init(ID int, network_ID string) {
 	e.ID = ID
 	e.network_ID = network_ID
-	SetMotorDirection(MD_Down)
+	SetDoorOpenLamp(false)
+	SetStopLamp(false)
+
 	//check other elevators if they're awake.
 	//this can be a for loop, so that all elevators are always checking if they need to be initialized or not. this allows for an elevator to die and come back again (wow, jesus parallell) without the system being rebooted
+	firstAwake := true
+	if firstAwake {
+
+	}
+	SetMotorDirection(MD_Down)
 	//go to bottom floor
 	SetDoorOpenLamp(false)
 	SetStopLamp(false)
@@ -88,9 +88,6 @@ func (e *Elevator) elev_run() {
 	if e.viable_floor(e.in_floor) {
 		e.state = ELEV_DOOR_OPEN
 	}
-	//go through order matrix. if any eligeble order, set motor direction and continue
-	//if no new orders: enter idle-mode
-	//update e.in_floor
 }
 
 func (e *Elevator) elev_stop() {
@@ -119,7 +116,7 @@ func (e *Elevator) elev_idle() {
 	t1 := e.check_turn()
 	t2 := e.check_turn()
 	if !(t1 && t2) { //viable order detected!
-		//enter open-door mode to ensure doors stay open for 3 more seconds
+		//enter open-door mode to ensure doors stay open for 3 more seconds. after this, we will enter running mode
 		e.state = ELEV_DOOR_OPEN
 	}
 }
@@ -141,9 +138,11 @@ func (e *Elevator) elev_routine() {
 	}
 }
 
-func (e *Elevator) hability_rouitine() {
-	//checks if elevator is alive every x seconds
-
+func (e *Elevator) hability_routine() {
+	for {
+		declareElevatorFunctional() //may need to send in elevator ID here
+		time.Sleep(100 * time.Millisecond)
+	}
 }
 
 func (e *Elevator) viable_floor(floor int) bool {
@@ -192,17 +191,10 @@ func (e *Elevator) get_behaviour() elev_states {
 }
 
 func (e *Elevator) get_direction() MotorDirection {
-	if e.state == ELEV_RUNNING && e.obstacle == false && e.justStopped == false {
-		return e.direction
-	}
-	return MD_Stop
+	return e.direction
 }
 
 /*
-pending functions:
-	func (e *Elevator) send_update()
-		sends update of worldview into the void. need network module to finish / know how to struct
-
 notes to self
 	allOrdersData[ordeType][orderFloor]
 
