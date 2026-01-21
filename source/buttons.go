@@ -47,15 +47,12 @@ func ButtonRoutine(e *Elevator) {
 					e.justStopped = true
 				}
 			}
-			e.state = ELEV_STOP
 			fmt.Printf("%+v\n", a)
-			for f := 0; f < NUM_FLOORS; f++ {
+			/*for f := 0; f < NUM_FLOORS; f++ {
 				for b := ButtonType(0); b < 3; b++ {
 					SetButtonLamp(b, f, false)
 				}
-			}
-		default:
-			e.obstacle = false
+			}*/
 		}
 	}
 
