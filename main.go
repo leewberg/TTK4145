@@ -9,9 +9,10 @@ func main() {
 	elevio.Init("localhost:15657", elevio.NUM_FLOORS)
 
 	var dummy elevio.Elevator
-	dummy.Init(1, "dummystring")
 
 	go elevio.ButtonRoutine(&dummy)
+
+	dummy.Init(1, "dummystring")
 
 	/*var d elevio.MotorDirection = elevio.MD_Up
 	//elevio.SetMotorDirection(d)

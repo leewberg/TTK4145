@@ -32,19 +32,22 @@ type Elevator struct {
 }
 
 func (e *Elevator) Init(ID int, network_ID string) {
+	e.state = ELEV_BOOT
 	e.ID = ID
 	e.network_ID = network_ID
+	//maybe more network init needed, idk
+
 	SetDoorOpenLamp(false)
 	SetStopLamp(false)
 
-	//check other elevators if they're awake.
-	//this can be a for loop, so that all elevators are always checking if they need to be initialized or not. this allows for an elevator to die and come back again (wow, jesus parallell) without the system being rebooted
-	firstAwake := true
-	if firstAwake {
-
+	a := <-drv_floors
+	for a != 0 {
+		//go to bottom floor (maybe not needed, but was req for previous elevator lab)
+		SetMotorDirection(MD_Down)
+		a = <-drv_floors
 	}
-	SetMotorDirection(MD_Down)
-	//go to bottom floor
+
+	e.direction = MD_Up
 	SetDoorOpenLamp(false)
 	SetStopLamp(false)
 
@@ -146,7 +149,7 @@ func (e *Elevator) hability_routine() {
 }
 
 func (e *Elevator) viable_floor(floor int) bool {
-	order_dir := readOrderData((OrderType(e.direction)), floor)
+	order_dir := readOrderData(MDToOrdertype(e.direction), floor)
 	order_cab := readOrderData(OrderType(1+e.ID), floor)
 
 	if (stateFromVersionNr(order_dir.version_nr) == ORDER_CONFIRMED && order_dir.assigned_to == e.ID) || (stateFromVersionNr(order_cab.version_nr) == ORDER_CONFIRMED && order_cab.assigned_to == e.ID) {
@@ -190,13 +193,27 @@ func (e *Elevator) get_behaviour() elev_states {
 	return e.state
 }
 
-func (e *Elevator) get_direction() MotorDirection {
-	return e.direction
+func (e *Elevator) get_direction() Direction {
+	switch e.direction {
+	case MD_Up:
+		return DIR_UP
+	case MD_Down:
+		return DIR_DOWN
+	}
+	return 0
+}
+
+func MDToOrdertype(dir MotorDirection) OrderType {
+	switch dir {
+	case MD_Up:
+		return HALL_UP
+	case MD_Down:
+		return HALL_DOWN
+	}
+	return 0
 }
 
 /*
 notes to self
-	allOrdersData[ordeType][orderFloor]
-
-	if we get performance issues wrt. checking the performance matrix while in the floor, i can add an extra class atribute which tells the elevator if it's supposed to stop in the next floor or not.
+	if we get performance issues wrt. checking the matrix while in the floor, i can add an extra class atribute which tells the elevator if it's supposed to stop in the next floor or not.
 */
