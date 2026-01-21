@@ -1,0 +1,137 @@
+package main
+
+import (
+	"sync"
+)
+
+type OrderState int
+type OrderType int
+
+const (
+	ORDER_CLEAR OrderState = iota
+	ORDER_REQUESTED
+	ORDER_CONFIRMED
+)
+
+const (
+	HALL_UP OrderType = iota
+	HALL_DOWN
+	CAB_1
+	CAB_2
+	CAB_3 // TODO: find a way to automate this
+)
+
+type OrderData struct {
+	version_nr int // contains state info
+
+	// only relevant in confirmed state
+	assigned_to   int
+	assigned_cost int
+}
+
+var allOrdersData map[OrderType][]OrderData
+var mutexOD sync.RWMutex
+
+func stateFromVersionNr(order_version_nr int) OrderState {
+	if order_version_nr%3 == 0 {
+		return ORDER_CLEAR
+	} else if order_version_nr%3 == 1 {
+		return ORDER_REQUESTED
+	} else {
+		return ORDER_CONFIRMED
+	}
+}
+
+func initOrderData() {
+	mutexOD.Lock()
+	defer mutexOD.Unlock()
+
+	for orderType := HALL_UP; orderType < NUM_ELEVATORS+2; orderType++ {
+		for floor := range NUM_FLOORS {
+			allOrdersData[orderType][floor] = OrderData{version_nr: 0, assigned_to: -1, assigned_cost: INF}
+
+		}
+	}
+
+}
+
+func requestOrder(orderType OrderType, orderFloor int) {
+	mutexOD.Lock()
+	defer mutexOD.Unlock()
+
+	if stateFromVersionNr(allOrdersData[orderType][orderFloor].version_nr) == ORDER_CLEAR {
+		allOrdersData[orderType][orderFloor].version_nr += 1
+	}
+}
+
+func clearOrder(orderType OrderType, orderFloor int) {
+	mutexOD.Lock()
+	defer mutexOD.Unlock()
+
+	if stateFromVersionNr(allOrdersData[orderType][orderFloor].version_nr) == ORDER_CONFIRMED {
+		allOrdersData[orderType][orderFloor].version_nr += 1
+	}
+}
+
+func readOrderData(orderType OrderType, orderFloor int) OrderData {
+	mutexOD.RLock()
+	defer mutexOD.Unlock()
+	return allOrdersData[orderType][orderFloor]
+}
+
+func assignOrder(orderType OrderType, orderFloor int, assignTo int, cost int) {
+	mutexOD.Lock()
+	defer mutexOD.Unlock()
+
+	if stateFromVersionNr(allOrdersData[orderType][orderFloor].version_nr) == ORDER_REQUESTED {
+		allOrdersData[orderType][orderFloor].version_nr += 1
+		allOrdersData[orderType][orderFloor].assigned_cost = cost
+		allOrdersData[orderType][orderFloor].assigned_to = assignTo
+
+	} else if stateFromVersionNr(allOrdersData[orderType][orderFloor].version_nr) == ORDER_CONFIRMED {
+		functionalElevators := getFunctionalElevators()
+
+		if !functionalElevators[allOrdersData[orderType][orderFloor].assigned_to] {
+
+			allOrdersData[orderType][orderFloor].assigned_cost = cost
+			allOrdersData[orderType][orderFloor].assigned_to = assignTo
+		}
+	}
+}
+
+func mergeOrder(orderType OrderType, orderFloor int, mergeData OrderData) {
+	mutexOD.Lock()
+	defer mutexOD.Unlock()
+
+	currentOrder := allOrdersData[orderType][orderFloor] // readability dummy
+
+	if mergeData.version_nr > currentOrder.version_nr {
+
+		// Stubbornnes clause: you should not externally clear an order assigned to this node
+		if stateFromVersionNr(currentOrder.version_nr) == ORDER_CONFIRMED &&
+			currentOrder.assigned_to == MY_ID &&
+			stateFromVersionNr(mergeData.version_nr) != ORDER_CONFIRMED {
+
+			allOrdersData[orderType][orderFloor].version_nr = mergeData.version_nr + (2 - mergeData.version_nr%3)
+
+		} else {
+			allOrdersData[orderType][orderFloor] = mergeData
+		}
+
+	} else if mergeData.version_nr == currentOrder.version_nr &&
+		stateFromVersionNr(mergeData.version_nr) == ORDER_CONFIRMED {
+
+		// Lowest cost gets the order, ensuring uniformity
+		if currentOrder.assigned_cost > mergeData.assigned_cost {
+
+			allOrdersData[orderType][orderFloor] = mergeData
+
+		} else if currentOrder.assigned_cost == mergeData.assigned_cost {
+
+			// Elevator id is the tiebreaker
+			if currentOrder.assigned_to > mergeData.assigned_to {
+				allOrdersData[orderType][orderFloor] = mergeData
+			}
+		}
+	}
+}
