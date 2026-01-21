@@ -1,4 +1,4 @@
-package main
+package elevio
 
 import "sync"
 
@@ -26,12 +26,14 @@ type ElevatorData struct {
 	data_version int
 }
 
-var allElevatorsData [NUM_ELEVATORS]ElevatorData
+var allElevatorsData []ElevatorData
 var mutexESD sync.RWMutex
 
 func initElevatorData() {
 	mutexESD.Lock()
 	defer mutexESD.Unlock()
+
+	allElevatorsData = make([]ElevatorData, NUM_ELEVATORS)
 	for i := range NUM_ELEVATORS {
 		allElevatorsData[i] = ElevatorData{last_floor: -1, state: STATE_BOOT, direction: DIR_UP, data_version: 0}
 	}
@@ -57,7 +59,7 @@ func mergeElevatorData(elevatorNum int, newData ElevatorData) {
 
 func getElevData(elevatorNum int) ElevatorData {
 	mutexESD.RLock()
-	defer mutexESD.Unlock()
+	defer mutexESD.RUnlock()
 
 	return allElevatorsData[elevatorNum]
 }

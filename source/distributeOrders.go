@@ -1,4 +1,4 @@
-package main
+package elevio
 
 func costFunction(orderType OrderType, orderFloor int, elevID int) int {
 	// finds the cost for elevator elevID to do a spesific order, by simulating execution
@@ -6,9 +6,14 @@ func costFunction(orderType OrderType, orderFloor int, elevID int) int {
 	duration := 0
 	ourCab := OrderType(2 + elevID)
 
+	if elevData.last_floor == -1 {
+		return INF // elevator not initialized
+	}
+
 	// copy down data so we don't override the actual orders
-	var simRequests map[OrderType][]bool
+	simRequests := make(map[OrderType][]bool)
 	for _, orderType := range []OrderType{HALL_UP, HALL_DOWN, ourCab} {
+		simRequests[orderType] = make([]bool, NUM_FLOORS)
 		for floor := range NUM_FLOORS {
 			orderData := readOrderData(orderType, floor)
 			if stateFromVersionNr(orderData.version_nr) == ORDER_CONFIRMED &&
@@ -82,6 +87,12 @@ func elevShouldStop(elevData ElevatorData, simRequests map[OrderType][]bool, our
 
 func chooseDirection(elevData ElevatorData, simRequests map[OrderType][]bool, ourCab OrderType) Direction {
 	// check for orders in current direction of travel. if there are none, turn around
+	if elevData.last_floor <= 0 {
+		return DIR_UP
+	}
+	if elevData.last_floor >= NUM_FLOORS-1 {
+		return DIR_DOWN
+	}
 	ordersBelow := false
 	ordersAbove := false
 
@@ -92,16 +103,16 @@ func chooseDirection(elevData ElevatorData, simRequests map[OrderType][]bool, ou
 		}
 	}
 
-	for floor := elevData.last_floor; floor > 0; floor-- {
+	for floor := elevData.last_floor; floor < NUM_FLOORS; floor++ {
 		if simRequests[HALL_DOWN][floor] || simRequests[ourCab][floor] || simRequests[HALL_UP][floor] {
 			ordersAbove = true
 			break
 		}
 	}
 
-	if ordersBelow || elevData.direction == DIR_DOWN {
+	if ordersBelow && elevData.direction == DIR_DOWN {
 		return DIR_DOWN
-	} else if ordersAbove || elevData.direction == DIR_UP {
+	} else if ordersAbove && elevData.direction == DIR_UP {
 		return DIR_UP
 	} else if ordersAbove {
 		return DIR_UP
@@ -145,12 +156,14 @@ func assignOrders() {
 		for floor := range NUM_FLOORS {
 
 			order := readOrderData(orderType, floor)
+			// Potential issue of changing data here
 			if stateFromVersionNr(order.version_nr) == ORDER_REQUESTED ||
-				!isElevFunctional[order.assigned_to] {
+				stateFromVersionNr(order.version_nr) == ORDER_CONFIRMED && !isElevFunctional[order.assigned_to] {
 
 				bestElev, cost := findBestElevForOrder(orderType, floor, isElevFunctional)
 				assignOrder(orderType, floor, bestElev, cost)
 			}
 		}
 	}
+	// TODO: At some point: raise an error if we are in CONFIRMED and assignment is still -1?
 }

@@ -1,4 +1,4 @@
-package main
+package elevio
 
 import (
 	"sync"
@@ -56,7 +56,12 @@ func initOrderData() {
 	mutexOD.Lock()
 	defer mutexOD.Unlock()
 
+	if allOrdersData == nil {
+		allOrdersData = make(map[OrderType][]OrderData)
+	}
+
 	for orderType := HALL_UP; orderType < NUM_ELEVATORS+2; orderType++ {
+		allOrdersData[orderType] = make([]OrderData, NUM_FLOORS)
 		for floor := range NUM_FLOORS {
 			allOrdersData[orderType][floor] = OrderData{version_nr: 0, assigned_to: -1, assigned_cost: INF}
 
@@ -85,7 +90,7 @@ func clearOrder(orderType OrderType, orderFloor int) {
 
 func readOrderData(orderType OrderType, orderFloor int) OrderData {
 	mutexOD.RLock()
-	defer mutexOD.Unlock()
+	defer mutexOD.RUnlock()
 	return allOrdersData[orderType][orderFloor]
 }
 
@@ -109,9 +114,21 @@ func assignOrder(orderType OrderType, orderFloor int, assignTo int, cost int) {
 	}
 }
 
+func validState(data OrderData) bool {
+	if stateFromVersionNr(data.version_nr) == ORDER_CONFIRMED &&
+		data.assigned_to == -1 {
+		return false
+	}
+	return true
+}
+
 func mergeOrder(orderType OrderType, orderFloor int, mergeData OrderData) {
 	mutexOD.Lock()
 	defer mutexOD.Unlock()
+
+	if !validState(mergeData) {
+		return
+	}
 
 	currentOrder := allOrdersData[orderType][orderFloor] // readability dummy
 
@@ -125,7 +142,9 @@ func mergeOrder(orderType OrderType, orderFloor int, mergeData OrderData) {
 			allOrdersData[orderType][orderFloor].version_nr = mergeData.version_nr + (2 - mergeData.version_nr%3)
 
 		} else {
+
 			allOrdersData[orderType][orderFloor] = mergeData
+
 		}
 
 	} else if mergeData.version_nr == currentOrder.version_nr &&

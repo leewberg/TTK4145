@@ -2,7 +2,6 @@ package elevio
 
 import (
 	"time"
-	//"fmt"
 )
 
 type elev_states int

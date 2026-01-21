@@ -1,13 +1,13 @@
 package main
 
 import (
-	elevio "Driver-go/source"
 	"fmt"
+	elevio "heislabb/source"
 )
 
 func main() {
 
-	numFloors := 4
+	numFloors := elevio.NUM_FLOORS
 
 	elevio.Init("localhost:15657", numFloors)
 
