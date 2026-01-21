@@ -6,11 +6,12 @@ import (
 
 func main() {
 
-	numFloors := elevio.NUM_FLOORS
+	elevio.Init("localhost:15657", elevio.NUM_FLOORS)
 
-	elevio.Init("localhost:15657", numFloors)
+	e_dummy elevio.Elevator
+	e_dummy.Init(1, "0000")
 
-	go elevio.ButtonRoutine()
+	go elevio.ButtonRoutine(e_dummy)
 
 	/*var d elevio.MotorDirection = elevio.MD_Up
 	//elevio.SetMotorDirection(d)

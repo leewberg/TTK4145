@@ -22,6 +22,8 @@ type Elevator struct {
 	network_ID  string
 	direction   MotorDirection
 	initialized bool
+	obstacle    bool
+	justStopped bool
 }
 
 func (e *Elevator) Init(ID int, network_ID string) {
@@ -55,8 +57,21 @@ func (e *Elevator) elev_run() {
 
 func (e *Elevator) elev_stop() {
 	SetStopLamp(true)
-	//check if stop button is pushed in
-	//once released, check if in floor. if so, enter open_door state. if not, go to nearest floor in direction it was headed and enter open door state before continuing
+	if e.justStopped {
+		a := <-drv_floors
+		if a == -1 {
+			for a == -1 {
+				SetMotorDirection(e.direction)
+				a = <-drv_floors
+			}
+			e.state = ELEV_DOOR_OPEN
+			e.justStopped = false
+		} else {
+			e.state = ELEV_DOOR_OPEN
+			e.justStopped = false
+		}
+		SetStopLamp(false)
+	}
 }
 
 func (e *Elevator) elev_idle() {
