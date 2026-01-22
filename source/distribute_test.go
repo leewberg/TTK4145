@@ -1,3 +1,4 @@
+// Testene er chatta
 package elevio
 
 import (
@@ -16,7 +17,7 @@ func makeSimRequests(ourCab OrderType) map[OrderType][]bool {
 }
 
 func TestChooseDirection_BasicCases(t *testing.T) {
-	ourCab := CAB_1
+	ourCab := OrderType(CAB_FIRST + 1)
 
 	t.Run("order below prefers down", func(t *testing.T) {
 		sim := makeSimRequests(ourCab)
@@ -72,7 +73,7 @@ func TestChooseDirection_BasicCases(t *testing.T) {
 }
 
 func TestChooseDirection_MoreCases(t *testing.T) {
-	ourCab := CAB_1
+	ourCab := OrderType(CAB_FIRST + 1)
 
 	t.Run("order above flips to up when currently down", func(t *testing.T) {
 		sim := makeSimRequests(ourCab)
@@ -127,7 +128,7 @@ func TestChooseDirection_MoreCases(t *testing.T) {
 }
 
 func TestElevShouldStop_BasicCases(t *testing.T) {
-	ourCab := CAB_1
+	ourCab := OrderType(CAB_FIRST + 1)
 
 	t.Run("stop for cab order at current floor", func(t *testing.T) {
 		sim := makeSimRequests(ourCab)
@@ -178,7 +179,7 @@ func TestElevShouldStop_BasicCases(t *testing.T) {
 }
 
 func TestElevShouldStop_MoreCases(t *testing.T) {
-	ourCab := CAB_1
+	ourCab := OrderType(CAB_FIRST + 1)
 
 	t.Run("no requests -> no stop", func(t *testing.T) {
 		sim := makeSimRequests(ourCab)
@@ -238,7 +239,7 @@ func ensureGlobals(t *testing.T) {
 	}
 	// create slices sized to number of floors
 	nFloors := NUM_FLOORS
-	for _, ot := range []OrderType{HALL_UP, HALL_DOWN, CAB_1, CAB_2, CAB_3} {
+	for ot := HALL_UP; ot < NUM_ELEVATORS+2; ot++ {
 		if _, ok := allOrdersData[ot]; !ok || len(allOrdersData[ot]) != nFloors {
 			allOrdersData[ot] = make([]OrderData, nFloors)
 		}

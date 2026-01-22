@@ -93,6 +93,7 @@ func chooseDirection(elevData ElevatorData, simRequests map[OrderType][]bool, ou
 	if elevData.last_floor >= NUM_FLOORS-1 {
 		return DIR_DOWN
 	}
+
 	ordersBelow := false
 	ordersAbove := false
 
@@ -144,7 +145,7 @@ func assignOrders() {
 	isElevFunctional := getFunctionalElevators()
 
 	// cab orders
-	for orderType := CAB_1; orderType < NUM_ELEVATORS+2; orderType++ {
+	for orderType := CAB_FIRST; orderType < NUM_ELEVATORS+2; orderType++ {
 		for floor := range NUM_FLOORS {
 			// ordertype - 2 is the elevatorID corresponding to the cab request
 			assignOrder(orderType, floor, int(orderType-2), 0)

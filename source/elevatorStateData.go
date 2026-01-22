@@ -5,7 +5,6 @@ import "sync"
 type Direction int
 type ElevState int
 
-// note: ensure the order matches with the HALL_UP/HALL_DOWN enum
 const (
 	DIR_UP   Direction = 1
 	DIR_DOWN Direction = -1

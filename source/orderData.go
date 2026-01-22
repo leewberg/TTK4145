@@ -16,9 +16,7 @@ const (
 const (
 	HALL_UP OrderType = iota
 	HALL_DOWN
-	CAB_1
-	CAB_2
-	CAB_3 // TODO: find a way to automate this
+	CAB_FIRST
 )
 
 type OrderData struct {
@@ -85,6 +83,8 @@ func clearOrder(orderType OrderType, orderFloor int) {
 
 	if stateFromVersionNr(allOrdersData[orderType][orderFloor].version_nr) == ORDER_CONFIRMED {
 		allOrdersData[orderType][orderFloor].version_nr += 1
+		// allOrdersData[orderType][orderFloor].assigned_cost = INF
+		// allOrdersData[orderType][orderFloor].assigned_to = -1
 	}
 }
 
@@ -130,11 +130,11 @@ func mergeOrder(orderType OrderType, orderFloor int, mergeData OrderData) {
 		return
 	}
 
-	currentOrder := allOrdersData[orderType][orderFloor] // readability dummy
+	currentOrder := allOrdersData[orderType][orderFloor]
 
 	if mergeData.version_nr > currentOrder.version_nr {
 
-		// Stubbornnes clause: you should not externally clear an order assigned to this node
+		// Stubbornness clause: you should not externally clear an order assigned to this node
 		if stateFromVersionNr(currentOrder.version_nr) == ORDER_CONFIRMED &&
 			currentOrder.assigned_to == MY_ID &&
 			stateFromVersionNr(mergeData.version_nr) != ORDER_CONFIRMED {
