@@ -6,12 +6,14 @@ import (
 )
 
 // Module to keep track of the last known functional times of all elevators
-var lastFunctionalTimes [NUM_ELEVATORS]int64
+var lastFunctionalTimes []int64
 var mutexLFT sync.RWMutex
 
 func initFunctionalTimes() {
 	mutexLFT.Lock()
 	defer mutexLFT.Unlock()
+
+	lastFunctionalTimes = make([]int64, NUM_ELEVATORS)
 
 	for i := range NUM_ELEVATORS {
 		lastFunctionalTimes[i] = 0
@@ -27,7 +29,7 @@ func declareElevatorFunctional() {
 
 func readElevatorFunctional(elevatorNum int) int64 {
 	mutexLFT.RLock()
-	defer mutexLFT.Unlock()
+	defer mutexLFT.RUnlock()
 
 	return lastFunctionalTimes[elevatorNum]
 }
@@ -41,7 +43,7 @@ func mergeElevFunctionalData(elevatorNum int, value int64) {
 
 func getFunctionalElevators() []bool {
 	mutexLFT.RLock()
-	defer mutexLFT.Unlock()
+	defer mutexLFT.RUnlock()
 
 	now := time.Now().UnixMilli()
 	funcElevs := make([]bool, NUM_ELEVATORS)
