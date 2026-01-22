@@ -1,6 +1,12 @@
 package elevio
 
+/*
+TODO:
+	rename variables and functions to camelCase
+*/
+
 import (
+	"fmt"
 	"time"
 )
 
@@ -19,17 +25,29 @@ type Elevator struct {
 	in_floor    int
 	ID          int
 	network_ID  string
-	direction   MotorDirection
+	direction   MotorDirection //only up or down, never stop
 	initialized bool
+	obstacle    bool
+	justStopped bool
 }
 
 func (e *Elevator) Init(ID int, network_ID string) {
-	e.direction = MD_Stop
-	SetMotorDirection(e.direction)
+	e.state = ELEV_BOOT
 	e.ID = ID
-	//check other elevators if they're awake.
-	//this can be a for loop, so that all elevators are always checking if they need to be initialized or not. this allows for an elevator to die and come back again (wow, jesus parallell) without the system being rebooted
-	//go to bottom floor
+	e.network_ID = network_ID
+	//maybe more network init needed, idk
+
+	SetDoorOpenLamp(false)
+	SetStopLamp(false)
+
+	a := <-drv_floors
+	for a != 0 {
+		//go to bottom floor (maybe not needed, but was req for previous elevator lab)
+		SetMotorDirection(MD_Down)
+		a = <-drv_floors
+	}
+
+	e.direction = MD_Up
 	SetDoorOpenLamp(false)
 	SetStopLamp(false)
 
@@ -37,31 +55,73 @@ func (e *Elevator) Init(ID int, network_ID string) {
 }
 
 func (e *Elevator) elev_open_door() {
-	e.direction = MD_Stop
 	SetMotorDirection(e.direction)
 	SetDoorOpenLamp(true)
+	if e.obstacle {
+		for e.obstacle == true {
+			e.obstacle = <-drv_obstr
+		}
+	}
 	time.Sleep(3 * time.Second)
-	e.state = ELEV_IDLE
-	SetDoorOpenLamp(false)
+	clearOrder(OrderType(e.direction), e.in_floor) //clear directional order
+	clearOrder(OrderType(1+e.ID), e.in_floor)      //clear cab-order for this elevator
+
+	//turn off lights. do this for both directional hall orders and cab orders, as i can walk on an elevator i've ordered to go up as someone has ordered it to the same floor inside the cab (longwinded explanation, but you get the point)
+	SetButtonLamp(ButtonType(e.direction), e.in_floor, false) //may need external light module to iterate through data matrix and update lights based on their state. but we may not, so who care (in the meanwhile)
+	SetButtonLamp(BT_Cab, e.in_floor, false)
 	//missing: turn off order lights (cab and direction)
+
+	//check if enter idle mode: run check turn twice. if the direction is the same after two turns (meaning there's no viable orders below or above), we enter idle mode. if there's none above but there are below, the direction will only be flipped once
+	t1 := e.check_turn()
+	t2 := e.check_turn()
+	if t1 && t2 { //if direction was flipped twice
+		//no viable orders above or below
+		e.state = ELEV_IDLE
+	} else {
+		e.state = ELEV_RUNNING
+	}
+
+	e.state = ELEV_RUNNING
+	SetDoorOpenLamp(false)
+
 }
 
 func (e *Elevator) elev_run() {
-	//go through order matrix. if any eligeble order, set motor direction and continue
-	//if no new orders: enter idle-mode
-	//
+	SetMotorDirection(e.direction)
+	if e.viable_floor(e.in_floor) {
+		e.state = ELEV_DOOR_OPEN
+	}
 }
 
 func (e *Elevator) elev_stop() {
 	SetStopLamp(true)
-	//check if stop button is pushed in
-	//once released, check if in floor. if so, enter open_door state. if not, go to nearest floor in direction it was headed and enter open door state before continuing
+	if e.justStopped {
+		a := <-drv_floors
+		if a == -1 {
+			for a == -1 {
+				SetMotorDirection(e.direction)
+				a = <-drv_floors
+			}
+			e.state = ELEV_DOOR_OPEN
+			e.justStopped = false
+		} else {
+			e.state = ELEV_DOOR_OPEN
+			e.justStopped = false
+		}
+		SetStopLamp(false)
+	}
+	//turn off all lights ? see task specification when it comes out later
 }
 
 func (e *Elevator) elev_idle() {
-	e.direction = MD_Stop
-	SetMotorDirection(e.direction)
-	//TODO: find way to get out of idle state
+	SetMotorDirection(MD_Stop)
+	SetDoorOpenLamp(true)
+	t1 := e.check_turn()
+	t2 := e.check_turn()
+	if !(t1 && t2) { //viable order detected!
+		//enter open-door mode to ensure doors stay open for 3 more seconds. after this, we will enter running mode
+		e.state = ELEV_DOOR_OPEN
+	}
 }
 
 func (e *Elevator) elev_routine() {
@@ -81,9 +141,48 @@ func (e *Elevator) elev_routine() {
 	}
 }
 
-func (e *Elevator) hability_rouitine() {
-	//checks if elevator is alive every x seconds
+func (e *Elevator) hability_routine() {
+	for {
+		declareElevatorFunctional() //may need to send in elevator ID here
+		time.Sleep(100 * time.Millisecond)
+	}
+}
 
+func (e *Elevator) viable_floor(floor int) bool {
+	order_dir := readOrderData(MDToOrdertype(e.direction), floor)
+	order_cab := readOrderData(OrderType(1+e.ID), floor)
+
+	if (stateFromVersionNr(order_dir.version_nr) == ORDER_CONFIRMED && order_dir.assigned_to == e.ID) || (stateFromVersionNr(order_cab.version_nr) == ORDER_CONFIRMED && order_cab.assigned_to == e.ID) {
+		//very messy, but it checks if the order is viable by first checking if the order is confirmed and is assigned to the elevator
+		return true
+	}
+	return false
+}
+
+func (e *Elevator) check_turn() bool {
+	//returns bool based on if direction was flipped or not
+	switch e.direction {
+	case MD_Up:
+		for i := e.in_floor; i < NUM_FLOORS; i++ {
+			if e.viable_floor(i) {
+				//if any of the floors above are viable
+				return false
+			}
+		}
+		e.direction = MD_Down
+		return true
+	case MD_Down:
+		for i := e.in_floor; i >= 0; i-- {
+			if e.viable_floor(i) {
+				//if any of the floors below are viable
+				return false
+			}
+		}
+		e.direction = MD_Up
+		return true
+	}
+	fmt.Printf("something went wrong, and we didn't register either up or down direction for elevator. \n")
+	return false
 }
 
 func (e *Elevator) get_current_floor() int {
@@ -94,36 +193,27 @@ func (e *Elevator) get_behaviour() elev_states {
 	return e.state
 }
 
-func (e *Elevator) get_direction() MotorDirection {
-	return e.direction
+func (e *Elevator) get_direction() Direction {
+	switch e.direction {
+	case MD_Up:
+		return DIR_UP
+	case MD_Down:
+		return DIR_DOWN
+	}
+	return 0
+}
+
+func MDToOrdertype(dir MotorDirection) OrderType {
+	switch dir {
+	case MD_Up:
+		return HALL_UP
+	case MD_Down:
+		return HALL_DOWN
+	}
+	return 0
 }
 
 /*
-pending functions:
-	func (e *Elevator) viable_floor() bool
-		takes in elevator object and it's current floor, and checks it against the allOrders-matrix (as defined in database module), to see if the current floor either has an up-order and/or a cab-order. if it does, it enters the door-open state
-
-	func (e *Elevator) check_turn()
-		checks the remaining floors in it's direction (so all floors above it if it's going up, all below if down.) in the larger allOrdersData matrix. if it sees that there's no viable orders above it (or below it. whatever), it'll turn. if not, it continues in stated direction
-		can use a for-loop and viable_floor() function for this
-		can use function readOrderData(orderType, orderFloor) for this. it returns an orderData object with attribute assigned_to, which tells if its assigned to us or not
-		can also use orderVersion2State(order_version_nr int) OrderState for this. tells us if it's [CLEAR, REQUESTED, CONFIRMED]
-
-	func (e *Elevator) enable_stop()
-		seperate routine that checks if the stop button is pushed in or not. if it is, the elevator immediately transitions to the stop-state
-
-	func (e *Elevator) send_order()
-		whenever an elevator detects an order, it'll send it to the allOrdersData matrix with floor and ordertype-.info. sends also own ID
-		|| whoopsie can use request
-
-	func (e *Elevator) clear_order()
-		whenever an elevator finishes an order, it sends a message to the data-matrix that the order is finished before turning off the lights || whoopsie already made. from database-module: clearOrder(orderType OrderType, orderFloor OrderType)
-
-	func (e *Elevator) send_update()
-		sends update of worldview into the void. need network module to finish / know how to struct
-
 notes to self
-	allOrdersData[ordeType][orderFloor]
-
-	if we get performance issues wrt. checking the performance matrix while in the floor, i can add an extra class atribute which tells the elevator if it's supposed to stop in the next floor or not.
+	if we get performance issues wrt. checking the matrix while in the floor, i can add an extra class atribute which tells the elevator if it's supposed to stop in the next floor or not.
 */

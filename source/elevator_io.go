@@ -18,16 +18,16 @@ type MotorDirection int
 
 const (
 	MD_Up   MotorDirection = 1
-	MD_Down                = -1
-	MD_Stop                = 0
+	MD_Down MotorDirection = -1
+	MD_Stop MotorDirection = 0
 )
 
 type ButtonType int
 
 const (
-	BT_HallUp   ButtonType = 0
-	BT_HallDown            = 1
-	BT_Cab                 = 2
+	BT_HallUp ButtonType = iota
+	BT_HallDown
+	BT_Cab
 )
 
 type ButtonEvent struct {
@@ -35,7 +35,7 @@ type ButtonEvent struct {
 	Button ButtonType
 }
 
-func Init(addr string, numFloors int) {
+func Init(addr string, numFloors int) { //may need to change - initiated for tcp-communication
 	if _initialized {
 		fmt.Println("Driver already initialized!")
 		return
