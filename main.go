@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	elevio "heislabb/source"
+	"time"
 )
 
 func main() {
@@ -11,9 +11,13 @@ func main() {
 
 	var dummy elevio.Elevator
 
-	go elevio.ButtonRoutine(&dummy)
-
 	dummy.Init(1, "dummystring")
+	elevio.InitOrderData()
+
+	time.Sleep(100 * time.Millisecond)
+	go elevio.ButtonRoutine(&dummy)
+	go dummy.Elev_routine()
+	go elevio.Light_routine(&dummy)
 
 	/*var d elevio.MotorDirection = elevio.MD_Up
 	//elevio.SetMotorDirection(d)

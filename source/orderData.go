@@ -50,7 +50,7 @@ func computeFullCost(orderData OrderData) float64 {
 	return cost
 }
 
-func initOrderData() {
+func InitOrderData() {
 	mutexOD.Lock()
 	defer mutexOD.Unlock()
 

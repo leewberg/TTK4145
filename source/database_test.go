@@ -25,7 +25,7 @@ func TestServiceAllRequests(t *testing.T) {
 
 	initElevatorData()
 	initFunctionalTimes()
-	initOrderData()
+	InitOrderData()
 
 	// Prepare a set of requested orders on several floors (edge floors included).
 	requested := make([]struct {
