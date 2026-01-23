@@ -1,5 +1,7 @@
 package elevio
 
+import "time"
+
 func costFunction(orderType OrderType, orderFloor int, elevID int) int {
 	// finds the cost for elevator elevID to do a spesific order, by simulating execution
 	elevData := getElevData(elevID)
@@ -122,34 +124,12 @@ func chooseDirection(elevData ElevatorData, simRequests map[OrderType][]bool, ou
 	}
 }
 
-func findBestElevForOrder(orderType OrderType, orderFloor int, isElevFunctional []bool) (bestElev int, bestCost int) {
-	bestElev = 0
-	bestCost = INF
-
-	for elevID := range NUM_ELEVATORS {
-		// this automatically enforces the rule that lower IDs have tiebreak priority
-		if isElevFunctional[elevID] {
-			cost := costFunction(orderType, orderFloor, elevID)
-			if cost < bestCost {
-				bestCost = cost
-				bestElev = elevID
-			}
-		}
-	}
-	return bestElev, bestCost
-}
-
 func assignOrders() {
-	// iterate through every order, check if it needs assignment and find cost
-
 	isElevFunctional := getFunctionalElevators()
 
 	// cab orders
-	for orderType := CAB_FIRST; orderType < NUM_ELEVATORS+2; orderType++ {
-		for floor := range NUM_FLOORS {
-			// ordertype - 2 is the elevatorID corresponding to the cab request
-			assignOrder(orderType, floor, int(orderType-2), 0)
-		}
+	for floor := range NUM_FLOORS {
+		assignOrder(CAB_FIRST+MY_ID, floor, 0)
 	}
 
 	// hall orders
@@ -157,14 +137,21 @@ func assignOrders() {
 		for floor := range NUM_FLOORS {
 
 			order := readOrderData(orderType, floor)
-			// Potential issue of changing data here
+
 			if stateFromVersionNr(order.version_nr) == ORDER_REQUESTED ||
 				stateFromVersionNr(order.version_nr) == ORDER_CONFIRMED && !isElevFunctional[order.assigned_to] {
 
-				bestElev, cost := findBestElevForOrder(orderType, floor, isElevFunctional)
-				assignOrder(orderType, floor, bestElev, cost)
+				cost := costFunction(orderType, floor, MY_ID)
+				assignOrder(orderType, floor, cost)
+
+			} else if stateFromVersionNr(order.version_nr) == ORDER_CONFIRMED &&
+				time.Now().UnixMilli()-order.assigned_at_time < BIDDING_TIME {
+
+				cost := costFunction(orderType, floor, MY_ID)
+				if cost+BIDDING_MIN_RAISE < order.assigned_cost {
+					assignOrder(orderType, floor, cost)
+				}
 			}
 		}
 	}
-	// TODO: At some point: raise an error if we are in CONFIRMED and assignment is still -1?
 }

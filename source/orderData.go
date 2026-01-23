@@ -2,6 +2,7 @@ package elevio
 
 import (
 	"sync"
+	"time"
 )
 
 type OrderState int
@@ -23,8 +24,9 @@ type OrderData struct {
 	version_nr int // contains state info
 
 	// only relevant in confirmed state
-	assigned_to   int
-	assigned_cost int
+	assigned_to      int
+	assigned_cost    int
+	assigned_at_time int64
 }
 
 var allOrdersData map[OrderType][]OrderData
@@ -61,7 +63,7 @@ func initOrderData() {
 	for orderType := HALL_UP; orderType < NUM_ELEVATORS+2; orderType++ {
 		allOrdersData[orderType] = make([]OrderData, NUM_FLOORS)
 		for floor := range NUM_FLOORS {
-			allOrdersData[orderType][floor] = OrderData{version_nr: 0, assigned_to: -1, assigned_cost: INF}
+			allOrdersData[orderType][floor] = OrderData{version_nr: 0, assigned_to: -1, assigned_cost: INF, assigned_at_time: 0}
 
 		}
 	}
@@ -83,8 +85,6 @@ func clearOrder(orderType OrderType, orderFloor int) {
 
 	if stateFromVersionNr(allOrdersData[orderType][orderFloor].version_nr) == ORDER_CONFIRMED {
 		allOrdersData[orderType][orderFloor].version_nr += 1
-		// allOrdersData[orderType][orderFloor].assigned_cost = INF
-		// allOrdersData[orderType][orderFloor].assigned_to = -1
 	}
 }
 
@@ -94,23 +94,25 @@ func readOrderData(orderType OrderType, orderFloor int) OrderData {
 	return allOrdersData[orderType][orderFloor]
 }
 
-func assignOrder(orderType OrderType, orderFloor int, assignTo int, cost int) {
+func assignOrder(orderType OrderType, orderFloor int, cost int) {
 	mutexOD.Lock()
 	defer mutexOD.Unlock()
+
+	isElevFunctional := getFunctionalElevators()
+	if !isElevFunctional[MY_ID] {
+		return
+	}
 
 	if stateFromVersionNr(allOrdersData[orderType][orderFloor].version_nr) == ORDER_REQUESTED {
 		allOrdersData[orderType][orderFloor].version_nr += 1
 		allOrdersData[orderType][orderFloor].assigned_cost = cost
-		allOrdersData[orderType][orderFloor].assigned_to = assignTo
+		allOrdersData[orderType][orderFloor].assigned_to = MY_ID
+		allOrdersData[orderType][orderFloor].assigned_at_time = time.Now().UnixMilli()
 
 	} else if stateFromVersionNr(allOrdersData[orderType][orderFloor].version_nr) == ORDER_CONFIRMED {
-		isElevFunctional := getFunctionalElevators()
-
-		if !isElevFunctional[allOrdersData[orderType][orderFloor].assigned_to] {
-
-			allOrdersData[orderType][orderFloor].assigned_cost = cost
-			allOrdersData[orderType][orderFloor].assigned_to = assignTo
-		}
+		allOrdersData[orderType][orderFloor].assigned_cost = cost
+		allOrdersData[orderType][orderFloor].assigned_to = MY_ID
+		allOrdersData[orderType][orderFloor].assigned_at_time = time.Now().UnixMilli()
 	}
 }
 
@@ -156,7 +158,6 @@ func mergeOrder(orderType OrderType, orderFloor int, mergeData OrderData) {
 		if currentCost > incomingCost {
 			allOrdersData[orderType][orderFloor] = mergeData
 		}
-		// is there a chance that reassignment messes with the stubbornness?
 
 	}
 }
