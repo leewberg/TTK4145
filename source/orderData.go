@@ -85,6 +85,9 @@ func clearOrder(orderType OrderType, orderFloor int) {
 
 	if stateFromVersionNr(allOrdersData[orderType][orderFloor].version_nr) == ORDER_CONFIRMED {
 		allOrdersData[orderType][orderFloor].version_nr += 1
+		if isAloneOnNetwork() {
+			allOrdersData[orderType][orderFloor].version_nr = 0
+		}
 	}
 }
 
