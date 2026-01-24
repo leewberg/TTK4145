@@ -283,6 +283,7 @@ func TestAssignOrders_Basic(t *testing.T) {
 	for i := range allElevatorsData {
 		mergeElevatorData(i, ElevatorData{last_floor: i, state: STATE_IDLE, direction: DIR_UP, data_version: 2})
 	}
+	setElevData(ElevatorData{last_floor: 2, state: STATE_IDLE, direction: DIR_UP, data_version: 2})
 
 	// run assignment
 	assignOrders()
