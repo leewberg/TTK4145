@@ -2,13 +2,11 @@ package elevio
 
 import "fmt"
 
-var drv_buttons = make(chan ButtonEvent)
-var drv_floors = make(chan int)
-var drv_obstr = make(chan bool)
-var drv_stop = make(chan bool)
-
 func ButtonRoutine(e *Elevator) {
-
+	var drv_buttons = make(chan ButtonEvent)
+	var drv_floors = make(chan int)
+	var drv_obstr = make(chan bool)
+	var drv_stop = make(chan bool)
 	go PollButtons(drv_buttons)
 	go PollFloorSensor(drv_floors)
 	go PollObstructionSwitch(drv_obstr)

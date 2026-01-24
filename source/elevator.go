@@ -35,12 +35,12 @@ func (e *Elevator) Init(ID int, network_ID string) {
 	SetDoorOpenLamp(false)
 	SetStopLamp(false)
 
-	a := <-drv_floors
+	a := GetFloor()
 	fmt.Printf("%d \n", a)
 	for a != 0 {
 		//go to bottom floor (maybe not needed, but was req for previous elevator lab)
 		SetMotorDirection(MD_Down)
-		a = <-drv_floors
+		a = GetFloor()
 	}
 
 	e.direction = MD_Up
@@ -55,7 +55,7 @@ func (e *Elevator) elev_open_door() {
 	SetDoorOpenLamp(true)
 	if e.obstacle {
 		for e.obstacle == true {
-			e.obstacle = <-drv_obstr
+			e.obstacle = GetObstruction()
 		}
 	}
 	time.Sleep(3 * time.Second)
@@ -86,11 +86,11 @@ func (e *Elevator) elev_run() {
 func (e *Elevator) elev_stop() {
 	SetStopLamp(true)
 	if e.justStopped {
-		a := <-drv_floors
+		a := GetFloor()
 		if a == -1 {
 			for a == -1 {
 				SetMotorDirection(e.direction)
-				a = <-drv_floors
+				a = GetFloor()
 			}
 			e.state = ELEV_DOOR_OPEN
 			e.justStopped = false
