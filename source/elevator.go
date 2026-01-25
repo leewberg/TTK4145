@@ -1,10 +1,5 @@
 package elevio
 
-/*
-TODO:
-	rename variables and functions to camelCase
-*/
-
 import (
 	"fmt"
 	"time"
@@ -40,11 +35,12 @@ func (e *Elevator) Init(ID int, network_ID string) {
 	SetDoorOpenLamp(false)
 	SetStopLamp(false)
 
-	a := <-drv_floors
+	a := GetFloor()
+	fmt.Printf("%d \n", a)
 	for a != 0 {
 		//go to bottom floor (maybe not needed, but was req for previous elevator lab)
 		SetMotorDirection(MD_Down)
-		a = <-drv_floors
+		a = GetFloor()
 	}
 
 	e.direction = MD_Up
@@ -59,18 +55,12 @@ func (e *Elevator) elev_open_door() {
 	SetDoorOpenLamp(true)
 	if e.obstacle {
 		for e.obstacle == true {
-			e.obstacle = <-drv_obstr
+			e.obstacle = GetObstruction()
 		}
 	}
 	time.Sleep(3 * time.Second)
 	clearOrder(OrderType(e.direction), e.in_floor) //clear directional order
 	clearOrder(OrderType(1+e.ID), e.in_floor)      //clear cab-order for this elevator
-
-	//turn off lights. do this for both directional hall orders and cab orders, as i can walk on an elevator i've ordered to go up as someone has ordered it to the same floor inside the cab (longwinded explanation, but you get the point)
-	SetButtonLamp(ButtonType(e.direction), e.in_floor, false) //may need external light module to iterate through data matrix and update lights based on their state. but we may not, so who care (in the meanwhile)
-	SetButtonLamp(BT_Cab, e.in_floor, false)
-	//missing: turn off order lights (cab and direction)
-
 	//check if enter idle mode: run check turn twice. if the direction is the same after two turns (meaning there's no viable orders below or above), we enter idle mode. if there's none above but there are below, the direction will only be flipped once
 	t1 := e.check_turn()
 	t2 := e.check_turn()
@@ -96,11 +86,11 @@ func (e *Elevator) elev_run() {
 func (e *Elevator) elev_stop() {
 	SetStopLamp(true)
 	if e.justStopped {
-		a := <-drv_floors
+		a := GetFloor()
 		if a == -1 {
 			for a == -1 {
 				SetMotorDirection(e.direction)
-				a = <-drv_floors
+				a = GetFloor()
 			}
 			e.state = ELEV_DOOR_OPEN
 			e.justStopped = false
@@ -124,7 +114,7 @@ func (e *Elevator) elev_idle() {
 	}
 }
 
-func (e *Elevator) elev_routine() {
+func (e *Elevator) Elev_routine() {
 	for {
 		switch e.state {
 		case ELEV_BOOT:

@@ -2,13 +2,11 @@ package elevio
 
 import "fmt"
 
-var drv_buttons = make(chan ButtonEvent)
-var drv_floors = make(chan int)
-var drv_obstr = make(chan bool)
-var drv_stop = make(chan bool)
-
 func ButtonRoutine(e *Elevator) {
-
+	var drv_buttons = make(chan ButtonEvent)
+	var drv_floors = make(chan int)
+	var drv_obstr = make(chan bool)
+	var drv_stop = make(chan bool)
 	go PollButtons(drv_buttons)
 	go PollFloorSensor(drv_floors)
 	go PollObstructionSwitch(drv_obstr)
@@ -17,13 +15,14 @@ func ButtonRoutine(e *Elevator) {
 	for {
 		select {
 		case a := <-drv_buttons: //hall up, down, or ANY cab button is pressed
+			fmt.Printf("%+v\n", a)
+			fmt.Printf("%+v\n", allOrdersData)
 			requestOrder(OrderType(a.Button), a.Floor) //add order to data-matrix
 
 			//TODO: add distiguishability for buttons pressed on the different pannels
 			//this may need to be an extension of the requestOrder function
 
-			fmt.Printf("%+v\n", a)
-			SetButtonLamp(a.Button, a.Floor, true)
+			//SetButtonLamp(a.Button, a.Floor, true)
 
 		case a := <-drv_floors:
 			fmt.Printf("%+v\n", a)
