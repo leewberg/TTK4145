@@ -22,15 +22,16 @@ type Elevator struct {
 	network_ID        string
 	direction         MotorDirection //only up or down, never stop
 	initialized       bool
-	obstacle          bool
 	justStopped       bool
 	is_between_floors bool
+	doorOpenTime      time.Time
 }
 
 func (e *Elevator) Init(ID int, network_ID string) {
 	e.state = ELEV_BOOT
 	e.ID = ID
 	e.network_ID = network_ID
+	e.doorOpenTime = time.Now()
 	//maybe more network init needed, idk
 
 	SetDoorOpenLamp(false)
@@ -46,6 +47,7 @@ func (e *Elevator) Init(ID int, network_ID string) {
 	e.direction = MD_Up
 	SetDoorOpenLamp(false)
 	SetStopLamp(false)
+	declareElevatorFunctional()
 
 	e.state = ELEV_IDLE
 }
@@ -53,32 +55,33 @@ func (e *Elevator) Init(ID int, network_ID string) {
 func (e *Elevator) elev_open_door() {
 	SetMotorDirection(MD_Stop)
 	SetDoorOpenLamp(true)
-	if e.obstacle {
-		for e.obstacle == true {
-			e.obstacle = GetObstruction()
+	if time.Since(e.doorOpenTime) > 3*time.Second { //doors have been open for 3+ seconds. double check times later
+		clearOrder(MDToOrdertype(e.direction), e.in_floor) //clear directional order
+		clearOrder(OrderType(2+e.ID), e.in_floor)          //clear cab-order for this elevator
+		//TODO: fix check_turn
+		//check if enter idle mode: run check turn twice. if the direction is the same after two turns (meaning there's no viable orders below or above), we enter idle mode. if there's none above but there are below, the direction will only be flipped once
+		t1 := e.check_turn()
+		t2 := e.check_turn()
+		if !GetObstruction() { //last check before exiting door-open state
+			if t1 && t2 { //if direction was flipped twice
+				//no viable orders above or below
+				e.state = ELEV_IDLE
+			} else {
+				e.state = ELEV_RUNNING
+			}
+			declareElevatorFunctional()
+			SetDoorOpenLamp(false)
 		}
 	}
-	time.Sleep(3 * time.Second)
-	clearOrder(MDToOrdertype(e.direction), e.in_floor) //clear directional order
-	clearOrder(OrderType(2+e.ID), e.in_floor)          //clear cab-order for this elevator
-	//check if enter idle mode: run check turn twice. if the direction is the same after two turns (meaning there's no viable orders below or above), we enter idle mode. if there's none above but there are below, the direction will only be flipped once
-	t1 := e.check_turn()
-	t2 := e.check_turn()
-	if t1 && t2 { //if direction was flipped twice
-		//no viable orders above or below
-		e.state = ELEV_IDLE
-	} else {
-		e.state = ELEV_RUNNING
-	}
-
-	SetDoorOpenLamp(false)
 
 }
 
 func (e *Elevator) elev_run() {
 	SetMotorDirection(e.direction)
+	declareElevatorFunctional()
 	if e.viable_floor(e.in_floor) && !e.is_between_floors {
 		e.state = ELEV_DOOR_OPEN
+		e.doorOpenTime = time.Now()
 	}
 }
 
@@ -107,8 +110,8 @@ func (e *Elevator) elev_idle() {
 	SetDoorOpenLamp(true)
 	t1 := e.check_turn()
 	t2 := e.check_turn()
+	declareElevatorFunctional()
 	if !(t1 && t2) { //viable order detected!
-		//enter open-door mode to ensure doors stay open for 3 more seconds. after this, we will enter running mode
 		e.state = ELEV_RUNNING
 		SetDoorOpenLamp(false)
 	}
@@ -130,13 +133,6 @@ func (e *Elevator) Elev_routine() {
 		}
 		time.Sleep(_pollRate)
 		// fmt.Println("State:", e.state)
-	}
-}
-
-func (e *Elevator) Hability_routine() {
-	for {
-		declareElevatorFunctional() //may need to send in elevator ID here
-		time.Sleep(100 * time.Millisecond)
 	}
 }
 
