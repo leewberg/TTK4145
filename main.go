@@ -11,24 +11,25 @@ func main() {
 	if len(os.Args) < 2 {
 		panic("Need one argument, specifying the ID of this elevator")
 	}
-	MY_ID, err := strconv.Atoi(os.Args[1])
-	if err != nil || MY_ID < 0 || MY_ID >= elevio.NUM_ELEVATORS {
+	var err error
+	elevio.MY_ID, err = strconv.Atoi(os.Args[1])
+	if err != nil || elevio.MY_ID < 0 || elevio.MY_ID >= elevio.NUM_ELEVATORS {
 		panic("ID needs to be an integer between 0 and NUM_ELEVATORS-1")
 	}
 
-	elevio.Init("localhost:15657", elevio.NUM_FLOORS)
+	elevio.Init("localhost:"+strconv.Itoa(15657+elevio.MY_ID), elevio.NUM_FLOORS)
 
-	var dummy elevio.Elevator
-	dummy.Init(1, "dummystring")
+	elevio.LocalElevator.Init(elevio.MY_ID, "dummystring")
 	elevio.InitOrderData()
 	elevio.InitElevatorData()
 	elevio.InitFunctionalTimes()
 
 	time.Sleep(100 * time.Millisecond)
 	elevio.StartNetwork(1)
-	go elevio.ButtonRoutine(&dummy)
-	go dummy.Elev_routine()
-	go elevio.Light_routine(&dummy)
+	go elevio.ButtonRoutine(&elevio.LocalElevator)
+	go elevio.LocalElevator.Elev_routine()
+	go elevio.LocalElevator.Hability_routine()
+	go elevio.Light_routine(&elevio.LocalElevator)
 	for {
 	}
 

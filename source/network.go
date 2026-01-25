@@ -37,7 +37,7 @@ func StartNetwork(myID int) {
 
 	// implement with functionalElevatorManager
 
-	go func() {
+	go func() { // sender
 		t := time.NewTicker(BROADCAST_PERIOD * time.Millisecond)
 		defer t.Stop()
 
@@ -45,6 +45,7 @@ func StartNetwork(myID int) {
 			<-t.C
 			assignOrders()
 			txWorld <- buildNetWorld(netID)
+			// fmt.Println("State of the order", readOrderData(HALL_UP, 0))
 		}
 	}()
 

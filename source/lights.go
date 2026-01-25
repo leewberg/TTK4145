@@ -19,7 +19,7 @@ func Light_routine(e *Elevator) {
 				}
 			}
 			//check cab button
-			order_cab := readOrderData(OrderType(1+e.ID), i)
+			order_cab := readOrderData(OrderType(2+e.ID), i)
 			if stateFromVersionNr(order_cab.version_nr) == ORDER_CONFIRMED {
 				SetButtonLamp(BT_Cab, i, true)
 			} else {

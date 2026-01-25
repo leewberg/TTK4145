@@ -1,16 +1,13 @@
 package elevio
 
 import "time"
+import "fmt"
 
-func costFunction(orderType OrderType, orderFloor int, elevID int) int {
-	// finds the cost for elevator elevID to do a spesific order, by simulating execution
-	elevData := getElevData(elevID)
+func costFunction(orderType OrderType, orderFloor int) int {
+	// finds the cost for the elevator to do a spesific order, by simulating execution
+	elevData := LocalElevator // shallow copy should be sufficient
 	duration := 0
-	ourCab := OrderType(2 + elevID)
-
-	if elevData.last_floor == -1 {
-		return INF // elevator not initialized
-	}
+	ourCab := OrderType(2 + MY_ID)
 
 	// copy down data so we don't override the actual orders
 	simRequests := make(map[OrderType][]bool)
@@ -19,7 +16,7 @@ func costFunction(orderType OrderType, orderFloor int, elevID int) int {
 		for floor := range NUM_FLOORS {
 			orderData := readOrderData(orderType, floor)
 			if stateFromVersionNr(orderData.version_nr) == ORDER_CONFIRMED &&
-				orderData.assigned_to == elevID {
+				orderData.assigned_to == MY_ID {
 				simRequests[orderType][floor] = true
 			}
 		}
@@ -28,11 +25,11 @@ func costFunction(orderType OrderType, orderFloor int, elevID int) int {
 
 	// initial considerations
 	switch elevData.state {
-	case STATE_DOOR_OPEN:
+	case ELEV_DOOR_OPEN:
 		duration -= DOOR_OPEN_TIME / 2
-	case STATE_RUNNING:
+	case ELEV_RUNNING:
 		duration += TRAVEL_TIME / 2
-		elevData.last_floor += int(elevData.direction)
+		elevData.in_floor += int(elevData.direction)
 	default:
 		elevData.direction = chooseDirection(elevData, simRequests, ourCab)
 	}
@@ -42,18 +39,18 @@ func costFunction(orderType OrderType, orderFloor int, elevID int) int {
 
 			// clears all orders for the floor
 			switch elevData.direction {
-			case DIR_DOWN:
-				simRequests[HALL_DOWN][elevData.last_floor] = false
-			case DIR_UP:
-				simRequests[HALL_UP][elevData.last_floor] = false
+			case MD_Down:
+				simRequests[HALL_DOWN][elevData.in_floor] = false
+			case MD_Up:
+				simRequests[HALL_UP][elevData.in_floor] = false
 			}
 			switch chooseDirection(elevData, simRequests, ourCab) {
-			case DIR_DOWN:
-				simRequests[HALL_DOWN][elevData.last_floor] = false
-			case DIR_UP:
-				simRequests[HALL_UP][elevData.last_floor] = false
+			case MD_Down:
+				simRequests[HALL_DOWN][elevData.in_floor] = false
+			case MD_Up:
+				simRequests[HALL_UP][elevData.in_floor] = false
 			}
-			simRequests[ourCab][elevData.last_floor] = false
+			simRequests[ourCab][elevData.in_floor] = false
 
 			if !simRequests[orderType][orderFloor] {
 				return duration
@@ -61,66 +58,67 @@ func costFunction(orderType OrderType, orderFloor int, elevID int) int {
 			duration += DOOR_OPEN_TIME
 		}
 		elevData.direction = chooseDirection(elevData, simRequests, ourCab)
-		elevData.last_floor += int(elevData.direction)
+		elevData.in_floor += int(elevData.direction)
 		duration += TRAVEL_TIME
 	}
 }
 
-func elevShouldStop(elevData ElevatorData, simRequests map[OrderType][]bool, ourCab OrderType) (shouldStop bool) {
+func elevShouldStop(elevData Elevator, simRequests map[OrderType][]bool, ourCab OrderType) (shouldStop bool) {
 	shouldStop = false
+	fmt.Println("here", elevData)
 
 	switch elevData.direction {
-	case DIR_DOWN:
-		shouldStop = shouldStop || simRequests[HALL_DOWN][elevData.last_floor]
-	case DIR_UP:
-		shouldStop = shouldStop || simRequests[HALL_UP][elevData.last_floor]
+	case MD_Down:
+		shouldStop = shouldStop || simRequests[HALL_DOWN][elevData.in_floor]
+	case MD_Up:
+		shouldStop = shouldStop || simRequests[HALL_UP][elevData.in_floor]
 	}
 
 	switch chooseDirection(elevData, simRequests, ourCab) {
-	case DIR_DOWN:
-		shouldStop = shouldStop || simRequests[HALL_DOWN][elevData.last_floor]
-	case DIR_UP:
-		shouldStop = shouldStop || simRequests[HALL_UP][elevData.last_floor]
+	case MD_Down:
+		shouldStop = shouldStop || simRequests[HALL_DOWN][elevData.in_floor]
+	case MD_Up:
+		shouldStop = shouldStop || simRequests[HALL_UP][elevData.in_floor]
 	}
-	shouldStop = shouldStop || simRequests[ourCab][elevData.last_floor]
+	shouldStop = shouldStop || simRequests[ourCab][elevData.in_floor]
 
 	return shouldStop
 }
 
-func chooseDirection(elevData ElevatorData, simRequests map[OrderType][]bool, ourCab OrderType) Direction {
+func chooseDirection(elevData Elevator, simRequests map[OrderType][]bool, ourCab OrderType) MotorDirection {
 	// check for orders in current direction of travel. if there are none, turn around
-	if elevData.last_floor <= 0 {
-		return DIR_UP
+	if elevData.in_floor <= 0 {
+		return MD_Up
 	}
-	if elevData.last_floor >= NUM_FLOORS-1 {
-		return DIR_DOWN
+	if elevData.in_floor >= NUM_FLOORS-1 {
+		return MD_Down
 	}
 
 	ordersBelow := false
 	ordersAbove := false
 
-	for floor := elevData.last_floor; floor > 0; floor-- {
+	for floor := elevData.in_floor; floor > 0; floor-- {
 		if simRequests[HALL_DOWN][floor] || simRequests[ourCab][floor] || simRequests[HALL_UP][floor] {
 			ordersBelow = true
 			break
 		}
 	}
 
-	for floor := elevData.last_floor; floor < NUM_FLOORS; floor++ {
+	for floor := elevData.in_floor; floor < NUM_FLOORS; floor++ {
 		if simRequests[HALL_DOWN][floor] || simRequests[ourCab][floor] || simRequests[HALL_UP][floor] {
 			ordersAbove = true
 			break
 		}
 	}
 
-	if ordersBelow && elevData.direction == DIR_DOWN {
-		return DIR_DOWN
-	} else if ordersAbove && elevData.direction == DIR_UP {
-		return DIR_UP
+	if ordersBelow && elevData.direction == MD_Down {
+		return MD_Down
+	} else if ordersAbove && elevData.direction == MD_Up {
+		return MD_Up
 	} else if ordersAbove {
-		return DIR_UP
+		return MD_Up
 	} else {
-		return DIR_DOWN
+		return MD_Down
 	}
 }
 
@@ -129,7 +127,10 @@ func assignOrders() {
 
 	// cab orders
 	for floor := range NUM_FLOORS {
-		assignOrder(CAB_FIRST+OrderType(MY_ID), floor, 0)
+		order := readOrderData(CAB_FIRST+OrderType(MY_ID), floor)
+		if stateFromVersionNr(order.version_nr) == ORDER_REQUESTED {
+			assignOrder(CAB_FIRST+OrderType(MY_ID), floor, 0)
+		}
 	}
 
 	// hall orders
@@ -137,17 +138,18 @@ func assignOrders() {
 		for floor := range NUM_FLOORS {
 
 			order := readOrderData(orderType, floor)
+			// fmt.Println(order)
 
 			if stateFromVersionNr(order.version_nr) == ORDER_REQUESTED ||
 				stateFromVersionNr(order.version_nr) == ORDER_CONFIRMED && !isElevFunctional[order.assigned_to] {
 
-				cost := costFunction(orderType, floor, MY_ID)
+				cost := costFunction(orderType, floor)
 				assignOrder(orderType, floor, cost)
 
 			} else if stateFromVersionNr(order.version_nr) == ORDER_CONFIRMED &&
 				time.Now().UnixMilli()-order.assigned_at_time < BIDDING_TIME {
 
-				cost := costFunction(orderType, floor, MY_ID)
+				cost := costFunction(orderType, floor)
 				if cost+BIDDING_MIN_RAISE < order.assigned_cost {
 					assignOrder(orderType, floor, cost)
 				}

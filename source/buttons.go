@@ -16,7 +16,6 @@ func ButtonRoutine(e *Elevator) {
 		select {
 		case a := <-drv_buttons: //hall up, down, or ANY cab button is pressed
 			fmt.Printf("%+v\n", a)
-			fmt.Printf("%+v\n", allOrdersData)
 			requestOrder(OrderType(a.Button), a.Floor) //add order to data-matrix
 
 			//TODO: add distiguishability for buttons pressed on the different pannels
@@ -25,9 +24,12 @@ func ButtonRoutine(e *Elevator) {
 			//SetButtonLamp(a.Button, a.Floor, true)
 
 		case a := <-drv_floors:
-			fmt.Printf("%+v\n", a)
+			// fmt.Printf("%+v\n", a)
 			if a != -1 { //update floor for elevator object if in a floor and not between floors
 				e.in_floor = a
+				e.is_between_floors = false
+			} else {
+				e.is_between_floors = true
 			}
 
 		case a := <-drv_obstr:

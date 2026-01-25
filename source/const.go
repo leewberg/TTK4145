@@ -4,6 +4,7 @@ const NUM_ELEVATORS = 3
 const NUM_FLOORS = 4
 
 var MY_ID int
+var LocalElevator Elevator
 
 const INF = 2147483647         // 32 bit signed integer limit
 const ELEVATOR_TIMEOUT = 4000  // ms

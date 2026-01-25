@@ -87,14 +87,15 @@ func PollButtons(receiver chan<- ButtonEvent) {
 }
 
 func PollFloorSensor(receiver chan<- int) {
-	prev := -1
+	// prev := -1
 	for {
 		time.Sleep(_pollRate)
 		v := GetFloor()
-		if v != prev && v != -1 {
-			receiver <- v
-		}
-		prev = v
+		receiver <- v
+		// if v != prev && v != -1 {
+		// 	receiver <- v
+		// }
+		// prev = v
 	}
 }
 
