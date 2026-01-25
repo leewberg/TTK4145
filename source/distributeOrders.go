@@ -129,7 +129,7 @@ func assignOrders() {
 
 	// cab orders
 	for floor := range NUM_FLOORS {
-		assignOrder(CAB_FIRST+MY_ID, floor, 0)
+		assignOrder(CAB_FIRST+OrderType(MY_ID), floor, 0)
 	}
 
 	// hall orders

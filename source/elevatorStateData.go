@@ -28,7 +28,7 @@ type ElevatorData struct {
 var allElevatorsData []ElevatorData
 var mutexESD sync.RWMutex
 
-func initElevatorData() {
+func InitElevatorData() {
 	mutexESD.Lock()
 	defer mutexESD.Unlock()
 
