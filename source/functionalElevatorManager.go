@@ -10,7 +10,7 @@ var lastFunctionalTimes []int64
 var lastRecivedMsgTime int64 // for figuring out if we are connected to a network
 var mutexLFT sync.RWMutex
 
-func initFunctionalTimes() {
+func InitFunctionalTimes() {
 	mutexLFT.Lock()
 	defer mutexLFT.Unlock()
 

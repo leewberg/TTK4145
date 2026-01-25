@@ -250,8 +250,8 @@ func ensureGlobals(t *testing.T) {
 	mutexOD.Unlock()
 
 	// initialize elevator state and functional times
-	initElevatorData()
-	initFunctionalTimes()
+	InitElevatorData()
+	InitFunctionalTimes()
 
 	// mark all elevators functional now
 	now := time.Now().UnixMilli()

@@ -23,8 +23,8 @@ func TestServiceAllRequests(t *testing.T) {
 		t.Fatal("NUM_FLOORS is zero")
 	}
 
-	initElevatorData()
-	initFunctionalTimes()
+	InitElevatorData()
+	InitFunctionalTimes()
 	InitOrderData()
 
 	// Prepare a set of requested orders on several floors (edge floors included).

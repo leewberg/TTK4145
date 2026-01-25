@@ -10,14 +10,18 @@ func main() {
 	elevio.Init("localhost:15657", elevio.NUM_FLOORS)
 
 	var dummy elevio.Elevator
-
 	dummy.Init(1, "dummystring")
 	elevio.InitOrderData()
+	elevio.InitElevatorData()
+	elevio.InitFunctionalTimes()
 
 	time.Sleep(100 * time.Millisecond)
+	elevio.StartNetwork(1)
 	go elevio.ButtonRoutine(&dummy)
 	go dummy.Elev_routine()
 	go elevio.Light_routine(&dummy)
+	for {
+	}
 
 	/*var d elevio.MotorDirection = elevio.MD_Up
 	//elevio.SetMotorDirection(d)

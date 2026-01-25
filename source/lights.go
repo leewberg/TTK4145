@@ -1,14 +1,12 @@
 package elevio
 
 import (
-	"fmt"
 	"time"
 )
 
 func Light_routine(e *Elevator) {
 	for {
 		for i := range NUM_FLOORS {
-			fmt.Printf("%d \n", i)
 			//check hall buttons
 			for j := range 2 {
 				order_dir := readOrderData(OrderType(j), i)
