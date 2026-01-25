@@ -2,11 +2,12 @@ package elevio
 
 const NUM_ELEVATORS = 3
 const NUM_FLOORS = 4
-const MY_ID = 0 // temp
+
+var MY_ID int
 
 const INF = 2147483647         // 32 bit signed integer limit
-const ELEVATOR_TIMEOUT = 5000  // ms
-const TRAVEL_TIME = 4000       // ms
+const ELEVATOR_TIMEOUT = 4000  // ms
+const TRAVEL_TIME = 2000       // ms
 const DOOR_OPEN_TIME = 3000    // ms
 const BIDDING_TIME = 300       // ms
 const BIDDING_MIN_RAISE = 1000 // ms

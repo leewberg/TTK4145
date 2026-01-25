@@ -2,10 +2,19 @@ package main
 
 import (
 	elevio "heislabb/source"
+	"os"
+	"strconv"
 	"time"
 )
 
 func main() {
+	if len(os.Args) < 2 {
+		panic("Need one argument, specifying the ID of this elevator")
+	}
+	MY_ID, err := strconv.Atoi(os.Args[1])
+	if err != nil || MY_ID < 0 || MY_ID >= elevio.NUM_ELEVATORS {
+		panic("ID needs to be an integer between 0 and NUM_ELEVATORS-1")
+	}
 
 	elevio.Init("localhost:15657", elevio.NUM_FLOORS)
 
