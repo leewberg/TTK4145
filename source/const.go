@@ -10,3 +10,5 @@ const TRAVEL_TIME = 4000       // ms
 const DOOR_OPEN_TIME = 3000    // ms
 const BIDDING_TIME = 300       // ms
 const BIDDING_MIN_RAISE = 1000 // ms
+const IS_ALONE_TIMEOUT = 500   // ms
+const BROADCAST_PERIOD = 100   // ms
