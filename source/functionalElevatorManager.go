@@ -7,7 +7,7 @@ import (
 
 // Module to keep track of the last known functional times of all elevators
 var lastFunctionalTimes []int64
-var lastRecivedMsgTime int64 // non-functional elevators that can still communicate included
+var lastRecivedMsgTime int64 // for figuring out if we are connected to a network
 var mutexLFT sync.RWMutex
 
 func initFunctionalTimes() {
@@ -41,6 +41,12 @@ func mergeElevFunctionalData(elevatorNum int, value int64) {
 	defer mutexLFT.Unlock()
 
 	lastFunctionalTimes[elevatorNum] = max(lastFunctionalTimes[elevatorNum], value)
+}
+
+func recivedMsg() {
+	mutexLFT.Lock()
+	defer mutexLFT.Unlock()
+
 	lastRecivedMsgTime = time.Now().UnixMilli()
 }
 

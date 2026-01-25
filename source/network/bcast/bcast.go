@@ -1,7 +1,6 @@
 package bcast
 
 import (
-	"Network-go/network/conn"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -24,7 +23,7 @@ func Transmitter(port int, chans ...interface{}) {
 		typeNames[i] = reflect.TypeOf(ch).Elem().String()
 	}
 
-	conn := conn.DialBroadcastUDP(port)
+	conn := DialBroadcastUDP(port)
 	addr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("255.255.255.255:%d", port))
 	for {
 		chosen, value, _ := reflect.Select(selectCases)
@@ -34,13 +33,13 @@ func Transmitter(port int, chans ...interface{}) {
 			JSON:   jsonstr,
 		})
 		if len(ttj) > bufSize {
-		    panic(fmt.Sprintf(
-		        "Tried to send a message longer than the buffer size (length: %d, buffer size: %d)\n\t'%s'\n"+
-		        "Either send smaller packets, or go to network/bcast/bcast.go and increase the buffer size",
-		        len(ttj), bufSize, string(ttj)))
+			panic(fmt.Sprintf(
+				"Tried to send a message longer than the buffer size (length: %d, buffer size: %d)\n\t'%s'\n"+
+					"Either send smaller packets, or go to network/bcast/bcast.go and increase the buffer size",
+				len(ttj), bufSize, string(ttj)))
 		}
 		conn.WriteTo(ttj, addr)
-    		
+
 	}
 }
 
@@ -54,7 +53,7 @@ func Receiver(port int, chans ...interface{}) {
 	}
 
 	var buf [bufSize]byte
-	conn := conn.DialBroadcastUDP(port)
+	conn := DialBroadcastUDP(port)
 	for {
 		n, _, e := conn.ReadFrom(buf[0:])
 		if e != nil {
@@ -83,12 +82,14 @@ type typeTaggedJSON struct {
 }
 
 // Checks that args to Tx'er/Rx'er are valid:
-//  All args must be channels
-//  Element types of channels must be encodable with JSON
-//  No element types are repeated
+//
+//	All args must be channels
+//	Element types of channels must be encodable with JSON
+//	No element types are repeated
+//
 // Implementation note:
-//  - Why there is no `isMarshalable()` function in encoding/json is a mystery,
-//    so the tests on element type are hand-copied from `encoding/json/encode.go`
+//   - Why there is no `isMarshalable()` function in encoding/json is a mystery,
+//     so the tests on element type are hand-copied from `encoding/json/encode.go`
 func checkArgs(chans ...interface{}) {
 	n := 0
 	for range chans {
@@ -117,13 +118,12 @@ func checkArgs(chans ...interface{}) {
 		elemTypes[i] = elemType
 
 		// Element type must be encodable with JSON
-		checkTypeRecursive(elemType, []int{i+1})
+		checkTypeRecursive(elemType, []int{i + 1})
 
 	}
 }
 
-
-func checkTypeRecursive(val reflect.Type, offsets []int){
+func checkTypeRecursive(val reflect.Type, offsets []int) {
 	switch val.Kind() {
 	case reflect.Complex64, reflect.Complex128, reflect.Chan, reflect.Func, reflect.UnsafePointer:
 		panic(fmt.Sprintf(
