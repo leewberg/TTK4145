@@ -8,9 +8,10 @@ import (
 
 // Order snapshot
 type NetOrder struct {
-	V int `json:"v"` // version_nr
-	A int `json:"a"` // assigned_to
-	C int `json:"c"` // assigned_cost
+	V int   `json:"v"` // version_nr
+	A int   `json:"a"` // assigned_to
+	C int   `json:"c"` // assigned_cost
+	T int64 `json:"t"` // assigned_at_time
 }
 
 // Full world view snapshot
@@ -89,6 +90,7 @@ func snapshotOrdersFlat() [][]NetOrder {
 				V: od.version_nr,
 				A: od.assigned_to,
 				C: od.assigned_cost,
+				T: od.assigned_at_time,
 			}
 		}
 	}
@@ -113,9 +115,10 @@ func mergeNetWorld(in NetWorld) {
 		for f := 0; f < NUM_FLOORS; f++ {
 			no := in.Orders[t][f]
 			mergeOrder(OrderType(t), f, OrderData{
-				version_nr:    no.V,
-				assigned_to:   no.A,
-				assigned_cost: no.C,
+				version_nr:       no.V,
+				assigned_to:      no.A,
+				assigned_cost:    no.C,
+				assigned_at_time: no.T,
 			})
 		}
 	}
