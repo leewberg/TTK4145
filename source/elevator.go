@@ -59,16 +59,15 @@ func (e *Elevator) Init(ID int, network_ID string) {
 func (e *Elevator) elev_open_door() {
 	SetMotorDirection(MD_Stop)
 	SetDoorOpenLamp(true)
-	if time.Since(e.doorOpenTime) > 3*time.Second { //doors have been open for 3+ seconds
+	if time.Since(e.doorOpenTime) > DOOR_OPEN_TIME*time.Second { //doors have been open for 3+ seconds
 		if e.switched {
 			e.direction = e.direction / (-1)
 			e.switched = false
 		}
 
-		ClearOrder(MDToOrdertype(e.direction), e.in_floor) //clear directional order
-		ClearOrder(OrderType(2+e.ID), e.in_floor)          //clear cab-order for this elevator
-
 		if !GetObstruction() { //last check before exiting door-open state
+			ClearOrder(MDToOrdertype(e.direction), e.in_floor) //clear directional order
+			ClearOrder(OrderType(2+e.ID), e.in_floor)          //clear cab-order for this elevator
 			if e.enter_idle() {
 				e.state = ELEV_IDLE
 			} else {
