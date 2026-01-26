@@ -9,11 +9,9 @@ func ButtonRoutine(e *Elevator) {
 	var drv_buttons = make(chan ButtonEvent)
 	var drv_floors = make(chan int)
 	var drv_obstr = make(chan bool)
-	//	var drv_stop = make(chan bool)
 	go PollButtons(drv_buttons)
 	go PollFloorSensor(drv_floors)
 	go PollObstructionSwitch(drv_obstr)
-	//	go PollStopButton(drv_stop)
 
 	for {
 		select {
@@ -38,7 +36,6 @@ func ButtonRoutine(e *Elevator) {
 			}
 
 		case a := <-drv_obstr:
-			fmt.Printf("%+v\n", a)
 			if a {
 				e.doorOpenTime = time.Now()
 			}

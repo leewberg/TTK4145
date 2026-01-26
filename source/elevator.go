@@ -27,7 +27,6 @@ type Elevator struct {
 	ID                int
 	network_ID        string
 	direction         MotorDirection //only up or down, never stop
-	initialized       bool
 	is_between_floors bool
 	doorOpenTime      time.Time
 	switched          bool
@@ -62,17 +61,14 @@ func (e *Elevator) elev_open_door() {
 	SetDoorOpenLamp(true)
 	if time.Since(e.doorOpenTime) > 3*time.Second { //doors have been open for 3+ seconds
 		if e.switched {
-			ClearOrder(MDToOrdertype((e.direction / (-1))), e.in_floor)
-		} else {
-			ClearOrder(MDToOrdertype(e.direction), e.in_floor) //clear directional order
+			e.direction = e.direction / (-1)
+			e.switched = false
 		}
-		ClearOrder(OrderType(2+e.ID), e.in_floor) //clear cab-order for this elevator
+
+		ClearOrder(MDToOrdertype(e.direction), e.in_floor) //clear directional order
+		ClearOrder(OrderType(2+e.ID), e.in_floor)          //clear cab-order for this elevator
 
 		if !GetObstruction() { //last check before exiting door-open state
-			if e.switched {
-				e.direction = e.direction / (-1)
-				e.switched = false
-			}
 			if e.enter_idle() {
 				e.state = ELEV_IDLE
 			} else {
@@ -164,7 +160,7 @@ func (e *Elevator) check_turn() exit_type {
 			if e.viable_floor(i) {
 				//if any of the floors above are viable
 				e.switched = false
-				//e.direction = MD_Up
+				e.direction = MD_Up
 				return SAME_DIR_AV
 			}
 		}
