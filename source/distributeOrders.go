@@ -26,6 +26,8 @@ func costFunction(orderType OrderType, orderFloor int) int {
 
 	// initial considerations
 	switch elevData.state {
+	case ELEV_BOOT:
+		return INF
 	case ELEV_DOOR_OPEN:
 		duration -= DOOR_OPEN_TIME / 2
 	case ELEV_RUNNING:
@@ -33,30 +35,21 @@ func costFunction(orderType OrderType, orderFloor int) int {
 		elevData.in_floor += int(elevData.direction)
 	default:
 		elevData.direction = chooseDirection(elevData, simRequests, ourCab)
+		if elevData.direction == MD_Stop {
+			return duration
+		}
 	}
 
 	for {
 		if elevShouldStop(elevData, simRequests, ourCab) {
 
 			// clears all orders for the floor
-			switch elevData.direction {
-			case MD_Down:
-				simRequests[HALL_DOWN][elevData.in_floor] = false
-			case MD_Up:
-				simRequests[HALL_UP][elevData.in_floor] = false
-			}
-			switch chooseDirection(elevData, simRequests, ourCab) {
-			case MD_Down:
-				simRequests[HALL_DOWN][elevData.in_floor] = false
-			case MD_Up:
-				simRequests[HALL_UP][elevData.in_floor] = false
-			}
-			simRequests[ourCab][elevData.in_floor] = false
-
-			if !simRequests[orderType][orderFloor] {
+			simulatedClearRequests(elevData, simRequests, ourCab)
+			duration += DOOR_OPEN_TIME
+			elevData.direction = chooseDirection(elevData, simRequests, ourCab)
+			if elevData.direction == MD_Stop {
 				return duration
 			}
-			duration += DOOR_OPEN_TIME
 		}
 		elevData.direction = chooseDirection(elevData, simRequests, ourCab)
 		elevData.in_floor += int(elevData.direction)
@@ -64,61 +57,104 @@ func costFunction(orderType OrderType, orderFloor int) int {
 	}
 }
 
+func simulatedClearRequests(elevData Elevator, simRequests map[OrderType][]bool, ourCab OrderType) {
+	simRequests[ourCab][elevData.in_floor] = false
+	switch elevData.direction {
+	case MD_Up:
+		if simRequests[HALL_UP][elevData.in_floor] {
+			simRequests[HALL_UP][elevData.in_floor] = false
+		} else if !requestsAbove(elevData, simRequests, ourCab) {
+			simRequests[HALL_DOWN][elevData.in_floor] = false
+		}
+	case MD_Down:
+		if simRequests[HALL_DOWN][elevData.in_floor] {
+			simRequests[HALL_DOWN][elevData.in_floor] = false
+		} else if !requestsBelow(elevData, simRequests, ourCab) {
+			simRequests[HALL_UP][elevData.in_floor] = false
+		}
+	default: // MD_Stop
+		simRequests[HALL_DOWN][elevData.in_floor] = false
+		simRequests[HALL_UP][elevData.in_floor] = false
+	}
+}
+
+func requestsAbove(elevData Elevator, simRequests map[OrderType][]bool, ourCab OrderType) bool {
+	for floor := elevData.in_floor + 1; floor < NUM_FLOORS; floor++ {
+		if anyRequestsAtFloor(floor, simRequests, ourCab) {
+			return true
+		}
+	}
+	return false
+}
+
+func requestsBelow(elevData Elevator, simRequests map[OrderType][]bool, ourCab OrderType) bool {
+	for floor := elevData.in_floor - 1; floor > 0; floor-- {
+		if anyRequestsAtFloor(floor, simRequests, ourCab) {
+			return true
+		}
+	}
+	return false
+}
+
+func anyRequests(simRequests map[OrderType][]bool, ourCab OrderType) bool {
+	for floor := range NUM_FLOORS {
+		if anyRequestsAtFloor(floor, simRequests, ourCab) {
+			return true
+		}
+	}
+	return false
+}
+
+func anyRequestsAtFloor(floor int, simRequests map[OrderType][]bool, ourCab OrderType) bool {
+	return simRequests[HALL_DOWN][floor] || simRequests[ourCab][floor] || simRequests[HALL_UP][floor]
+}
+
 func elevShouldStop(elevData Elevator, simRequests map[OrderType][]bool, ourCab OrderType) (shouldStop bool) {
+	// An out of bounds check failed here at index 4. so in_floor likley got to high
 	shouldStop = false
 
 	switch elevData.direction {
-	case MD_Down:
-		shouldStop = shouldStop || simRequests[HALL_DOWN][elevData.in_floor]
 	case MD_Up:
-		shouldStop = shouldStop || simRequests[HALL_UP][elevData.in_floor]
+		return (simRequests[HALL_UP][elevData.in_floor] ||
+			simRequests[ourCab][elevData.in_floor] ||
+			!requestsAbove(elevData, simRequests, ourCab) ||
+			elevData.in_floor == 0 ||
+			elevData.in_floor >= NUM_ELEVATORS-1)
+	case MD_Down:
+		return (simRequests[HALL_DOWN][elevData.in_floor] ||
+			simRequests[ourCab][elevData.in_floor] ||
+			!requestsBelow(elevData, simRequests, ourCab) ||
+			elevData.in_floor == 0 ||
+			elevData.in_floor >= NUM_ELEVATORS-1)
+	default: // case MD_Stop
+		return true
 	}
 
-	switch chooseDirection(elevData, simRequests, ourCab) {
-	case MD_Down:
-		shouldStop = shouldStop || simRequests[HALL_DOWN][elevData.in_floor]
-	case MD_Up:
-		shouldStop = shouldStop || simRequests[HALL_UP][elevData.in_floor]
-	}
-	shouldStop = shouldStop || simRequests[ourCab][elevData.in_floor]
-
-	return shouldStop
 }
 
 func chooseDirection(elevData Elevator, simRequests map[OrderType][]bool, ourCab OrderType) MotorDirection {
 	// check for orders in current direction of travel. if there are none, turn around
-	if elevData.in_floor <= 0 {
-		return MD_Up
-	}
-	if elevData.in_floor >= NUM_FLOORS-1 {
-		return MD_Down
-	}
-
-	ordersBelow := false
-	ordersAbove := false
-
-	for floor := elevData.in_floor; floor > 0; floor-- {
-		if simRequests[HALL_DOWN][floor] || simRequests[ourCab][floor] || simRequests[HALL_UP][floor] {
-			ordersBelow = true
-			break
+	switch elevData.direction {
+	case MD_Up:
+		if requestsAbove(elevData, simRequests, ourCab) {
+			return MD_Up
+		} else if anyRequestsAtFloor(elevData.in_floor, simRequests, ourCab) {
+			return MD_Stop
+		} else if requestsBelow(elevData, simRequests, ourCab) {
+			return MD_Down
+		} else {
+			return MD_Stop
 		}
-	}
-
-	for floor := elevData.in_floor; floor < NUM_FLOORS; floor++ {
-		if simRequests[HALL_DOWN][floor] || simRequests[ourCab][floor] || simRequests[HALL_UP][floor] {
-			ordersAbove = true
-			break
+	default:
+		if requestsBelow(elevData, simRequests, ourCab) {
+			return MD_Down
+		} else if anyRequestsAtFloor(elevData.in_floor, simRequests, ourCab) {
+			return MD_Stop
+		} else if requestsAbove(elevData, simRequests, ourCab) {
+			return MD_Up
+		} else {
+			return MD_Stop
 		}
-	}
-
-	if ordersBelow && elevData.direction == MD_Down {
-		return MD_Down
-	} else if ordersAbove && elevData.direction == MD_Up {
-		return MD_Up
-	} else if ordersAbove {
-		return MD_Up
-	} else {
-		return MD_Down
 	}
 }
 

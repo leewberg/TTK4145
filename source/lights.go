@@ -15,7 +15,7 @@ func Clear_all_lights() {
 	}
 }
 
-func Light_routine(e *Elevator) {
+func Light_routine(elevID int) {
 	for {
 		for i := range NUM_FLOORS {
 			//check hall buttons
@@ -30,7 +30,7 @@ func Light_routine(e *Elevator) {
 				}
 			}
 			//check cab button
-			ourCab := OrderType(2 + e.ID)
+			ourCab := OrderType(2 + elevID)
 			order_cab := ReadOrderData(ourCab, i)
 			if stateFromVersionNr(order_cab.version_nr) == ORDER_CONFIRMED {
 				SetButtonLamp(BT_Cab, i, true)
