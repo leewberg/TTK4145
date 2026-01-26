@@ -13,4 +13,4 @@ const DOOR_OPEN_TIME = 3000   // ms
 const BIDDING_TIME = 300      // ms
 const BIDDING_MIN_RAISE = 100 // ms
 const IS_ALONE_TIMEOUT = 500  // ms
-const BROADCAST_PERIOD = 100  // ms
+const BROADCAST_PERIOD = 50   // ms

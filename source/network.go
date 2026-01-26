@@ -44,7 +44,7 @@ func StartNetwork(myID int) {
 			<-t.C
 			assignOrders()
 			txWorld <- buildNetWorld(netID)
-			// fmt.Println("State of the order", readOrderData(CAB_FIRST+1, 1))
+			// fmt.Println("State of the order", ReadOrderData(HALL_UP, 0))
 		}
 	}()
 
