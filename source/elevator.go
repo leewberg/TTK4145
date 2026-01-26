@@ -6,6 +6,13 @@ import (
 )
 
 type elev_states int
+type exit_type int
+
+const (
+	SAME_DIR_AV exit_type = iota
+	DIFF_DIR_AV
+	NO_FIND
+)
 
 const (
 	ELEV_BOOT elev_states = iota
@@ -22,15 +29,18 @@ type Elevator struct {
 	network_ID        string
 	direction         MotorDirection //only up or down, never stop
 	initialized       bool
-	obstacle          bool
 	justStopped       bool
 	is_between_floors bool
+	doorOpenTime      time.Time
+	switched          bool
 }
 
 func (e *Elevator) Init(ID int, network_ID string) {
 	e.state = ELEV_BOOT
 	e.ID = ID
 	e.network_ID = network_ID
+	e.doorOpenTime = time.Now()
+	e.switched = false
 	//maybe more network init needed, idk
 
 	SetDoorOpenLamp(false)
@@ -46,6 +56,7 @@ func (e *Elevator) Init(ID int, network_ID string) {
 	e.direction = MD_Up
 	SetDoorOpenLamp(false)
 	SetStopLamp(false)
+	declareElevatorFunctional()
 
 	e.state = ELEV_IDLE
 }
@@ -53,33 +64,43 @@ func (e *Elevator) Init(ID int, network_ID string) {
 func (e *Elevator) elev_open_door() {
 	SetMotorDirection(MD_Stop)
 	SetDoorOpenLamp(true)
-	if e.obstacle {
-		for e.obstacle == true {
-			e.obstacle = GetObstruction()
+	if time.Since(e.doorOpenTime) > 3*time.Second { //doors have been open for 3+ seconds. double check times later
+		if e.switched {
+			clearOrder(MDToOrdertype((e.direction / (-1))), e.in_floor)
+		} else {
+			clearOrder(MDToOrdertype(e.direction), e.in_floor) //clear directional order
+		}
+		clearOrder(OrderType(2+e.ID), e.in_floor) //clear cab-order for this elevator
+		//check if enter idle mode: run check turn twice. if the direction is the same after two turns (meaning there's no viable orders below or above), we enter idle mode. if there's none above but there are below, the direction will only be flipped once
+		e.switched = false
+		if !GetObstruction() { //last check before exiting door-open state
+			t1 := e.check_turn()
+			if t1 == NO_FIND {
+				t2 := e.check_turn()
+				if t2 != NO_FIND {
+					SetDoorOpenLamp(false)
+					e.state = ELEV_RUNNING
+				} else {
+					e.state = ELEV_IDLE
+				}
+			} else {
+				SetDoorOpenLamp(false)
+				e.state = ELEV_RUNNING
+			}
+			declareElevatorFunctional()
+			SetDoorOpenLamp(false)
 		}
 	}
-	time.Sleep(3 * time.Second)
-	ClearOrder(MDToOrdertype(e.direction), e.in_floor) //clear directional order
-	ClearOrder(OrderType(2+e.ID), e.in_floor)          //clear cab-order for this elevator
-	//check if enter idle mode: run check turn twice. if the direction is the same after two turns (meaning there's no viable orders below or above), we enter idle mode. if there's none above but there are below, the direction will only be flipped once
-	t1 := e.check_turn()
-	t2 := e.check_turn()
-	if t1 && t2 { //if direction was flipped twice
-		//no viable orders above or below
-		e.state = ELEV_IDLE
-	} else {
-		e.state = ELEV_RUNNING
-	}
-
-	SetDoorOpenLamp(false)
 
 }
 
 func (e *Elevator) elev_run() {
 	// TODO: Make sure this stops if we no longer have an order to go after. Someone could have stolen the order :)
 	SetMotorDirection(e.direction)
+	declareElevatorFunctional()
 	if e.viable_floor(e.in_floor) && !e.is_between_floors {
 		e.state = ELEV_DOOR_OPEN
+		e.doorOpenTime = time.Now()
 	}
 }
 
@@ -107,12 +128,23 @@ func (e *Elevator) elev_idle() {
 	SetMotorDirection(MD_Stop)
 	SetDoorOpenLamp(true)
 	t1 := e.check_turn()
-	t2 := e.check_turn()
-	if !(t1 && t2) { //viable order detected!
-		//enter open-door mode to ensure doors stay open for 3 more seconds. after this, we will enter running mode
+	if t1 == NO_FIND {
+		t2 := e.check_turn()
+		if t2 != NO_FIND {
+			SetDoorOpenLamp(false)
+			e.state = ELEV_RUNNING
+
+		}
+	} else {
+		SetDoorOpenLamp(false)
+		e.state = ELEV_RUNNING
+	}
+	declareElevatorFunctional()
+
+	/*if !(t1 && t2) { //viable order detected!
 		e.state = ELEV_RUNNING
 		SetDoorOpenLamp(false)
-	}
+	}*/
 }
 
 func (e *Elevator) Elev_routine() {
@@ -134,48 +166,76 @@ func (e *Elevator) Elev_routine() {
 	}
 }
 
-func (e *Elevator) Hability_routine() {
-	for {
-		declareElevatorFunctional() //may need to send in elevator ID here
-		time.Sleep(100 * time.Millisecond)
-	}
-}
-
 func (e *Elevator) viable_floor(floor int) bool {
-	order_dir := ReadOrderData(MDToOrdertype(e.direction), floor)
-	order_cab := ReadOrderData(OrderType(2+e.ID), floor)
+	if e.switched {
+		order_dir := readOrderData(MDToOrdertype((e.direction)/(-1)), floor)
+		if stateFromVersionNr(order_dir.version_nr) == ORDER_CONFIRMED && order_dir.assigned_to == e.ID && time.Now().UnixMilli()-order_dir.assigned_at_time > BIDDING_TIME) {
+			return true
+		}
+	} else {
+		order_dir := readOrderData(MDToOrdertype(e.direction), floor)
+		if stateFromVersionNr(order_dir.version_nr) == ORDER_CONFIRMED && order_dir.assigned_to == e.ID && time.Now().UnixMilli()-order_dir.assigned_at_time > BIDDING_TIME){
+			return true
+		}
+	}
+	order_cab := readOrderData(OrderType(2+e.ID), floor)
 
-	if (stateFromVersionNr(order_dir.version_nr) == ORDER_CONFIRMED && order_dir.assigned_to == e.ID && time.Now().UnixMilli()-order_dir.assigned_at_time > BIDDING_TIME) || (stateFromVersionNr(order_cab.version_nr) == ORDER_CONFIRMED && order_cab.assigned_to == e.ID) {
+	if stateFromVersionNr(order_cab.version_nr) == ORDER_CONFIRMED && order_cab.assigned_to == e.ID && time.Now().UnixMilli()-order_dir.assigned_at_time > BIDDING_TIME){
 		//very messy, but it checks if the order is viable by first checking if the order is confirmed and is assigned to the elevator
 		return true
 	}
 	return false
 }
 
-func (e *Elevator) check_turn() bool {
-	//returns bool based on if direction was flipped or not
+func (e *Elevator) check_turn() exit_type {
+	//returns bool based on if there's no viable floors above or below
 	switch e.direction {
 	case MD_Up:
 		for i := e.in_floor; i < NUM_FLOORS; i++ {
 			if e.viable_floor(i) {
+				fmt.Printf("there's an avaliable floor above! (current dir: up) \n")
 				//if any of the floors above are viable
-				return false
+				e.switched = false
+				return SAME_DIR_AV
 			}
 		}
-		e.direction = MD_Down
-		return true
-	case MD_Down:
 		for i := e.in_floor; i >= 0; i-- {
 			if e.viable_floor(i) {
 				//if any of the floors below are viable
-				return false
+				e.direction = MD_Down
+				e.switched = true
+				fmt.Printf("there's an avaliable floor below! switching direction to down (current dir: up) \n")
+				return DIFF_DIR_AV //we don't flip, as there's viable floors below us
 			}
 		}
+		fmt.Printf("no viable floors found above or below, switching to down\n")
+		e.switched = false
+		e.direction = MD_Down
+		return NO_FIND
+	case MD_Down:
+		for i := e.in_floor; i >= 0; i-- {
+			if e.viable_floor(i) {
+				fmt.Printf("there's a viable floor below! current dir: down\n")
+				//if any of the floors below are viable
+				e.switched = false
+				return SAME_DIR_AV
+			}
+		}
+		for i := e.in_floor; i < NUM_FLOORS; i++ {
+			if e.viable_floor(i) {
+				//if any of the floors above are viable
+				fmt.Printf("there's an avaliable floor above! current dir: down. switching direction to up\n")
+				e.switched = true
+				return DIFF_DIR_AV
+			}
+		}
+		fmt.Printf("no viable floors found above or below, switching to up\n")
 		e.direction = MD_Up
-		return true
+		e.switched = false
+		return NO_FIND
 	}
 	fmt.Printf("something went wrong, and we didn't register either up or down direction for elevator. \n")
-	return false
+	return NO_FIND
 }
 
 func (e *Elevator) get_current_floor() int {
