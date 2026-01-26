@@ -9,11 +9,9 @@ func ButtonRoutine(e *Elevator) {
 	var drv_buttons = make(chan ButtonEvent)
 	var drv_floors = make(chan int)
 	var drv_obstr = make(chan bool)
-	var drv_stop = make(chan bool)
 	go PollButtons(drv_buttons)
 	go PollFloorSensor(drv_floors)
 	go PollObstructionSwitch(drv_obstr)
-	go PollStopButton(drv_stop)
 
 	for {
 		select {
@@ -29,7 +27,6 @@ func ButtonRoutine(e *Elevator) {
 			}
 
 		case a := <-drv_floors:
-			// fmt.Printf("%+v\n", a)
 			if a != -1 { //update floor for elevator object if in a floor and not between floors
 				e.in_floor = a
 				SetFloorIndicator(a)
@@ -39,25 +36,9 @@ func ButtonRoutine(e *Elevator) {
 			}
 
 		case a := <-drv_obstr:
-			fmt.Printf("%+v\n", a)
 			if a {
 				e.doorOpenTime = time.Now()
 			}
-
-		case a := <-drv_stop:
-			if a {
-				e.state = ELEV_STOP
-			} else {
-				if e.state == ELEV_STOP {
-					e.justStopped = true
-				}
-			}
-			fmt.Printf("%+v\n", a)
-			/*for f := 0; f < NUM_FLOORS; f++ {
-				for b := ButtonType(0); b < 3; b++ {
-					SetButtonLamp(b, f, false)
-				}
-			}*/
 		}
 	}
 
