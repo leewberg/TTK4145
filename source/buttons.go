@@ -16,12 +16,14 @@ func ButtonRoutine(e *Elevator) {
 		select {
 		case a := <-drv_buttons: //hall up, down, or ANY cab button is pressed
 			fmt.Printf("%+v\n", a)
-			requestOrder(OrderType(a.Button), a.Floor) //add order to data-matrix
+			if a.Button == BT_HallDown || a.Button == BT_HallUp {
 
-			//TODO: add distiguishability for buttons pressed on the different pannels
-			//this may need to be an extension of the requestOrder function
+				RequestOrder(OrderType(a.Button), a.Floor)
 
-			//SetButtonLamp(a.Button, a.Floor, true)
+			} else { // cab order: adjust to which panel we order from
+				RequestOrder(OrderType(a.Button)+OrderType(MY_ID), a.Floor)
+
+			}
 
 		case a := <-drv_floors:
 			// fmt.Printf("%+v\n", a)

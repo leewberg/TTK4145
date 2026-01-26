@@ -4,12 +4,23 @@ import (
 	"time"
 )
 
+func Clear_all_lights() {
+	for i := range NUM_FLOORS {
+		//clear hall buttons
+		for j := range 2 {
+			SetButtonLamp(ButtonType(j), i, false)
+		}
+		//clear cab button
+		SetButtonLamp(BT_Cab, i, false)
+	}
+}
+
 func Light_routine(e *Elevator) {
 	for {
 		for i := range NUM_FLOORS {
 			//check hall buttons
 			for j := range 2 {
-				order_dir := readOrderData(OrderType(j), i)
+				order_dir := ReadOrderData(OrderType(j), i)
 
 				if stateFromVersionNr(order_dir.version_nr) == ORDER_CONFIRMED {
 					SetButtonLamp(ButtonType(j), i, true)
@@ -19,7 +30,8 @@ func Light_routine(e *Elevator) {
 				}
 			}
 			//check cab button
-			order_cab := readOrderData(OrderType(2+e.ID), i)
+			ourCab := OrderType(2 + e.ID)
+			order_cab := ReadOrderData(ourCab, i)
 			if stateFromVersionNr(order_cab.version_nr) == ORDER_CONFIRMED {
 				SetButtonLamp(BT_Cab, i, true)
 			} else {

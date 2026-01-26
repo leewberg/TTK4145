@@ -59,8 +59,8 @@ func (e *Elevator) elev_open_door() {
 		}
 	}
 	time.Sleep(3 * time.Second)
-	clearOrder(MDToOrdertype(e.direction), e.in_floor) //clear directional order
-	clearOrder(OrderType(2+e.ID), e.in_floor)          //clear cab-order for this elevator
+	ClearOrder(MDToOrdertype(e.direction), e.in_floor) //clear directional order
+	ClearOrder(OrderType(2+e.ID), e.in_floor)          //clear cab-order for this elevator
 	//check if enter idle mode: run check turn twice. if the direction is the same after two turns (meaning there's no viable orders below or above), we enter idle mode. if there's none above but there are below, the direction will only be flipped once
 	t1 := e.check_turn()
 	t2 := e.check_turn()
@@ -76,6 +76,7 @@ func (e *Elevator) elev_open_door() {
 }
 
 func (e *Elevator) elev_run() {
+	// TODO: Make sure this stops if we no longer have an order to go after. Someone could have stolen the order :)
 	SetMotorDirection(e.direction)
 	if e.viable_floor(e.in_floor) && !e.is_between_floors {
 		e.state = ELEV_DOOR_OPEN
@@ -141,10 +142,10 @@ func (e *Elevator) Hability_routine() {
 }
 
 func (e *Elevator) viable_floor(floor int) bool {
-	order_dir := readOrderData(MDToOrdertype(e.direction), floor)
-	order_cab := readOrderData(OrderType(2+e.ID), floor)
+	order_dir := ReadOrderData(MDToOrdertype(e.direction), floor)
+	order_cab := ReadOrderData(OrderType(2+e.ID), floor)
 
-	if (stateFromVersionNr(order_dir.version_nr) == ORDER_CONFIRMED && order_dir.assigned_to == e.ID) || (stateFromVersionNr(order_cab.version_nr) == ORDER_CONFIRMED && order_cab.assigned_to == e.ID) {
+	if (stateFromVersionNr(order_dir.version_nr) == ORDER_CONFIRMED && order_dir.assigned_to == e.ID && time.Now().UnixMilli()-order_dir.assigned_at_time > BIDDING_TIME) || (stateFromVersionNr(order_cab.version_nr) == ORDER_CONFIRMED && order_cab.assigned_to == e.ID) {
 		//very messy, but it checks if the order is viable by first checking if the order is confirmed and is assigned to the elevator
 		return true
 	}
@@ -183,16 +184,6 @@ func (e *Elevator) get_current_floor() int {
 
 func (e *Elevator) get_behaviour() elev_states {
 	return e.state
-}
-
-func (e *Elevator) get_direction() Direction {
-	switch e.direction {
-	case MD_Up:
-		return DIR_UP
-	case MD_Down:
-		return DIR_DOWN
-	}
-	return 0
 }
 
 func MDToOrdertype(dir MotorDirection) OrderType {

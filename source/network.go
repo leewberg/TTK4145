@@ -15,7 +15,7 @@ type NetOrder struct {
 }
 
 // Full world view snapshot
-type NetWorld struct {
+type WorldView struct {
 	Sender string `json:"sender"` // which elevetor that sends the message, ex "elev-0"
 
 	FunctionalElevs []int64 `json:"functionals"`
@@ -25,13 +25,12 @@ type NetWorld struct {
 
 func StartNetwork(myID int) {
 
-	const peerPort = 15647 // tall fra nettverksmodulen
-	const bcastPort = 16569
+	const bcastPort = 16569 // tall fra nettverksmodulen
 
 	netID := fmt.Sprintf("elev-%d", myID)
 
-	txWorld := make(chan NetWorld, 16)
-	rxWorld := make(chan NetWorld, 64)
+	txWorld := make(chan WorldView, 16)
+	rxWorld := make(chan WorldView, 64)
 	go bcast.Transmitter(bcastPort, txWorld)
 	go bcast.Receiver(bcastPort, rxWorld)
 
@@ -45,7 +44,7 @@ func StartNetwork(myID int) {
 			<-t.C
 			assignOrders()
 			txWorld <- buildNetWorld(netID)
-			// fmt.Println("State of the order", readOrderData(HALL_UP, 0))
+			// fmt.Println("State of the order", readOrderData(CAB_FIRST+1, 1))
 		}
 	}()
 
@@ -62,8 +61,8 @@ func StartNetwork(myID int) {
 	}()
 }
 
-func buildNetWorld(sender string) NetWorld {
-	w := NetWorld{
+func buildNetWorld(sender string) WorldView {
+	w := WorldView{
 		Sender:          sender,
 		FunctionalElevs: snapshotFuncElevators(),
 		Orders:          snapshotOrdersFlat(),
@@ -86,7 +85,7 @@ func snapshotOrdersFlat() [][]NetOrder {
 	for t := 0; t < types; t++ {
 		out[t] = make([]NetOrder, NUM_FLOORS)
 		for f := 0; f < NUM_FLOORS; f++ {
-			od := readOrderData(OrderType(t), f)
+			od := ReadOrderData(OrderType(t), f)
 			out[t][f] = NetOrder{
 				V: od.version_nr,
 				A: od.assigned_to,
@@ -98,7 +97,7 @@ func snapshotOrdersFlat() [][]NetOrder {
 	return out
 }
 
-func mergeNetWorld(in NetWorld) {
+func mergeNetWorld(in WorldView) {
 	// Merge elevators
 	for ID, e := range in.FunctionalElevs {
 		mergeElevFunctionalData(ID, e)
@@ -115,7 +114,7 @@ func mergeNetWorld(in NetWorld) {
 		}
 		for f := 0; f < NUM_FLOORS; f++ {
 			no := in.Orders[t][f]
-			mergeOrder(OrderType(t), f, OrderData{
+			MergeOrder(OrderType(t), f, OrderData{
 				version_nr:       no.V,
 				assigned_to:      no.A,
 				assigned_cost:    no.C,
