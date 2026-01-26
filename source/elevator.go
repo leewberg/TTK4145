@@ -68,19 +68,13 @@ func (e *Elevator) elev_open_door() {
 		}
 		ClearOrder(OrderType(2+e.ID), e.in_floor) //clear cab-order for this elevator
 
-		//check if enter idle mode: run check turn twice. if the we don't find any avaliable orders above or below, we enter idle mode. only run second check if first check has no finds, as running the check twice will mess up the direction
 		if !GetObstruction() { //last check before exiting door-open state
 			if e.switched {
 				e.direction = e.direction / (-1)
 				e.switched = false
 			}
-			if e.check_turn() == NO_FIND {
-				if e.check_turn() != NO_FIND {
-					SetDoorOpenLamp(false)
-					e.state = ELEV_RUNNING
-				} else {
-					e.state = ELEV_IDLE
-				}
+			if e.enter_idle() {
+				e.state = ELEV_IDLE
 			} else {
 				SetDoorOpenLamp(false)
 				e.state = ELEV_RUNNING
@@ -92,14 +86,13 @@ func (e *Elevator) elev_open_door() {
 }
 
 func (e *Elevator) elev_run() {
-	// TODO: Make sure this stops if we no longer have an order to go after. Someone could have stolen the order :)
 	SetMotorDirection(e.direction)
 	declareElevatorFunctional()
 	if e.viable_floor(e.in_floor) && !e.is_between_floors {
 		e.state = ELEV_DOOR_OPEN
 		e.doorOpenTime = time.Now()
 	} else {
-		if e.check_turn() == NO_FIND && e.check_turn() == NO_FIND {
+		if e.enter_idle() {
 			e.state = ELEV_IDLE
 		}
 	}
@@ -108,15 +101,19 @@ func (e *Elevator) elev_run() {
 func (e *Elevator) elev_idle() {
 	SetMotorDirection(MD_Stop)
 	SetDoorOpenLamp(true)
-	if e.check_turn() == NO_FIND {
-		if e.check_turn() != NO_FIND {
-			SetDoorOpenLamp(false)
-			e.state = ELEV_RUNNING
-		}
-	} else {
+	if !e.enter_idle() {
 		SetDoorOpenLamp(false)
 		e.state = ELEV_RUNNING
 	}
+	/*	if e.check_turn() == NO_FIND {
+			if e.check_turn() != NO_FIND {
+				SetDoorOpenLamp(false)
+				e.state = ELEV_RUNNING
+			}
+		} else {
+			SetDoorOpenLamp(false)
+			e.state = ELEV_RUNNING
+		}*/
 	declareElevatorFunctional()
 }
 
@@ -158,8 +155,18 @@ func (e *Elevator) viable_floor(floor int) bool {
 	return false
 }
 
+func (e *Elevator) enter_idle() bool {
+	//checks if the elevator should enter idle-mode
+	if e.check_turn() == NO_FIND {
+		if e.check_turn() != NO_FIND { //only run this twice if you didn't find an avaliable order in the first instance. if you run it twice you risk messing up the resulting directions
+			return false
+		}
+		return true
+	}
+	return false
+}
+
 func (e *Elevator) check_turn() exit_type {
-	//returns bool based on if there's no viable floors above or below
 	switch e.direction {
 	case MD_Up:
 		for i := e.in_floor; i < NUM_FLOORS; i++ {
