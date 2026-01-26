@@ -95,6 +95,7 @@ func (e *Elevator) elev_open_door() {
 }
 
 func (e *Elevator) elev_run() {
+	// TODO: Make sure this stops if we no longer have an order to go after. Someone could have stolen the order :)
 	SetMotorDirection(e.direction)
 	declareElevatorFunctional()
 	if e.viable_floor(e.in_floor) && !e.is_between_floors {
@@ -168,18 +169,18 @@ func (e *Elevator) Elev_routine() {
 func (e *Elevator) viable_floor(floor int) bool {
 	if e.switched {
 		order_dir := readOrderData(MDToOrdertype((e.direction)/(-1)), floor)
-		if stateFromVersionNr(order_dir.version_nr) == ORDER_CONFIRMED && order_dir.assigned_to == e.ID {
+		if stateFromVersionNr(order_dir.version_nr) == ORDER_CONFIRMED && order_dir.assigned_to == e.ID && time.Now().UnixMilli()-order_dir.assigned_at_time > BIDDING_TIME) {
 			return true
 		}
 	} else {
 		order_dir := readOrderData(MDToOrdertype(e.direction), floor)
-		if stateFromVersionNr(order_dir.version_nr) == ORDER_CONFIRMED && order_dir.assigned_to == e.ID {
+		if stateFromVersionNr(order_dir.version_nr) == ORDER_CONFIRMED && order_dir.assigned_to == e.ID && time.Now().UnixMilli()-order_dir.assigned_at_time > BIDDING_TIME){
 			return true
 		}
 	}
 	order_cab := readOrderData(OrderType(2+e.ID), floor)
 
-	if stateFromVersionNr(order_cab.version_nr) == ORDER_CONFIRMED && order_cab.assigned_to == e.ID {
+	if stateFromVersionNr(order_cab.version_nr) == ORDER_CONFIRMED && order_cab.assigned_to == e.ID && time.Now().UnixMilli()-order_dir.assigned_at_time > BIDDING_TIME){
 		//very messy, but it checks if the order is viable by first checking if the order is confirmed and is assigned to the elevator
 		return true
 	}
@@ -243,16 +244,6 @@ func (e *Elevator) get_current_floor() int {
 
 func (e *Elevator) get_behaviour() elev_states {
 	return e.state
-}
-
-func (e *Elevator) get_direction() Direction {
-	switch e.direction {
-	case MD_Up:
-		return DIR_UP
-	case MD_Down:
-		return DIR_DOWN
-	}
-	return 0
 }
 
 func MDToOrdertype(dir MotorDirection) OrderType {

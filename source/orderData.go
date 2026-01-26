@@ -71,7 +71,7 @@ func InitOrderData() {
 
 }
 
-func requestOrder(orderType OrderType, orderFloor int) {
+func RequestOrder(orderType OrderType, orderFloor int) {
 	mutexOD.Lock()
 	defer mutexOD.Unlock()
 
@@ -80,7 +80,7 @@ func requestOrder(orderType OrderType, orderFloor int) {
 	}
 }
 
-func clearOrder(orderType OrderType, orderFloor int) {
+func ClearOrder(orderType OrderType, orderFloor int) {
 	// fmt.Println("requesting clear @", orderType, orderFloor)
 	mutexOD.Lock()
 	defer mutexOD.Unlock()
@@ -93,13 +93,13 @@ func clearOrder(orderType OrderType, orderFloor int) {
 	}
 }
 
-func readOrderData(orderType OrderType, orderFloor int) OrderData {
+func ReadOrderData(orderType OrderType, orderFloor int) OrderData {
 	mutexOD.RLock()
 	defer mutexOD.RUnlock()
 	return allOrdersData[orderType][orderFloor]
 }
 
-func assignOrder(orderType OrderType, orderFloor int, cost int) {
+func AssignOrder(orderType OrderType, orderFloor int, cost int) {
 	mutexOD.Lock()
 	defer mutexOD.Unlock()
 
@@ -129,7 +129,7 @@ func validState(data OrderData) bool {
 	return true
 }
 
-func mergeOrder(orderType OrderType, orderFloor int, mergeData OrderData) {
+func MergeOrder(orderType OrderType, orderFloor int, mergeData OrderData) {
 	mutexOD.Lock()
 	defer mutexOD.Unlock()
 

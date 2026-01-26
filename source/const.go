@@ -6,11 +6,11 @@ const NUM_FLOORS = 4
 var MY_ID int
 var LocalElevator Elevator
 
-const INF = 2147483647         // 32 bit signed integer limit
-const ELEVATOR_TIMEOUT = 4000  // ms
-const TRAVEL_TIME = 2000       // ms
-const DOOR_OPEN_TIME = 3000    // ms
-const BIDDING_TIME = 300       // ms
-const BIDDING_MIN_RAISE = 1000 // ms
-const IS_ALONE_TIMEOUT = 500   // ms
-const BROADCAST_PERIOD = 100   // ms
+const INF = 2147483647        // 32 bit signed integer limit
+const ELEVATOR_TIMEOUT = 4000 // ms
+const TRAVEL_TIME = 2500      // ms
+const DOOR_OPEN_TIME = 3000   // ms
+const BIDDING_TIME = 300      // ms
+const BIDDING_MIN_RAISE = 100 // ms
+const IS_ALONE_TIMEOUT = 500  // ms
+const BROADCAST_PERIOD = 100  // ms

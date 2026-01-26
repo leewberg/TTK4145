@@ -1,6 +1,7 @@
 package main
 
 import (
+	// "fmt"
 	elevio "heislabb/source"
 	"os"
 	"strconv"
@@ -19,13 +20,13 @@ func main() {
 
 	elevio.Init("localhost:"+strconv.Itoa(15657+elevio.MY_ID), elevio.NUM_FLOORS)
 
+	elevio.Clear_all_lights()
 	elevio.InitOrderData()
-	elevio.InitElevatorData()
 	elevio.InitFunctionalTimes()
 	elevio.LocalElevator.Init(elevio.MY_ID, "dummystring")
 
 	time.Sleep(100 * time.Millisecond)
-	elevio.StartNetwork(1)
+	elevio.StartNetwork(elevio.MY_ID)
 	go elevio.ButtonRoutine(&elevio.LocalElevator)
 	go elevio.LocalElevator.Elev_routine()
 	go elevio.Light_routine(&elevio.LocalElevator)

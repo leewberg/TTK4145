@@ -1,7 +1,8 @@
 package elevio
 
 import "time"
-import "fmt"
+
+// import "fmt"
 
 func costFunction(orderType OrderType, orderFloor int) int {
 	// finds the cost for the elevator to do a spesific order, by simulating execution
@@ -14,7 +15,7 @@ func costFunction(orderType OrderType, orderFloor int) int {
 	for _, orderType := range []OrderType{HALL_UP, HALL_DOWN, ourCab} {
 		simRequests[orderType] = make([]bool, NUM_FLOORS)
 		for floor := range NUM_FLOORS {
-			orderData := readOrderData(orderType, floor)
+			orderData := ReadOrderData(orderType, floor)
 			if stateFromVersionNr(orderData.version_nr) == ORDER_CONFIRMED &&
 				orderData.assigned_to == MY_ID {
 				simRequests[orderType][floor] = true
@@ -65,7 +66,6 @@ func costFunction(orderType OrderType, orderFloor int) int {
 
 func elevShouldStop(elevData Elevator, simRequests map[OrderType][]bool, ourCab OrderType) (shouldStop bool) {
 	shouldStop = false
-	fmt.Println("here", elevData)
 
 	switch elevData.direction {
 	case MD_Down:
@@ -127,9 +127,9 @@ func assignOrders() {
 
 	// cab orders
 	for floor := range NUM_FLOORS {
-		order := readOrderData(CAB_FIRST+OrderType(MY_ID), floor)
+		order := ReadOrderData(CAB_FIRST+OrderType(MY_ID), floor)
 		if stateFromVersionNr(order.version_nr) == ORDER_REQUESTED {
-			assignOrder(CAB_FIRST+OrderType(MY_ID), floor, 0)
+			AssignOrder(CAB_FIRST+OrderType(MY_ID), floor, 0)
 		}
 	}
 
@@ -137,21 +137,21 @@ func assignOrders() {
 	for _, orderType := range []OrderType{HALL_UP, HALL_DOWN} {
 		for floor := range NUM_FLOORS {
 
-			order := readOrderData(orderType, floor)
+			order := ReadOrderData(orderType, floor)
 			// fmt.Println(order)
 
 			if stateFromVersionNr(order.version_nr) == ORDER_REQUESTED ||
 				stateFromVersionNr(order.version_nr) == ORDER_CONFIRMED && !isElevFunctional[order.assigned_to] {
 
 				cost := costFunction(orderType, floor)
-				assignOrder(orderType, floor, cost)
+				AssignOrder(orderType, floor, cost)
 
 			} else if stateFromVersionNr(order.version_nr) == ORDER_CONFIRMED &&
 				time.Now().UnixMilli()-order.assigned_at_time < BIDDING_TIME {
 
 				cost := costFunction(orderType, floor)
 				if cost+BIDDING_MIN_RAISE < order.assigned_cost {
-					assignOrder(orderType, floor, cost)
+					AssignOrder(orderType, floor, cost)
 				}
 			}
 		}
