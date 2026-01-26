@@ -65,9 +65,10 @@ func (e *Elevator) elev_open_door() {
 			e.switched = false
 		}
 
+		ClearOrder(MDToOrdertype(e.direction), e.in_floor) //clear directional order
+		ClearOrder(OrderType(2+e.ID), e.in_floor)          //clear cab-order for this elevator
+
 		if !GetObstruction() { //last check before exiting door-open state
-			ClearOrder(MDToOrdertype(e.direction), e.in_floor) //clear directional order
-			ClearOrder(OrderType(2+e.ID), e.in_floor)          //clear cab-order for this elevator
 			if e.enter_idle() {
 				e.state = ELEV_IDLE
 			} else {

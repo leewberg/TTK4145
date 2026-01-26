@@ -85,7 +85,8 @@ func ClearOrder(orderType OrderType, orderFloor int) {
 	mutexOD.Lock()
 	defer mutexOD.Unlock()
 
-	if stateFromVersionNr(allOrdersData[orderType][orderFloor].version_nr) == ORDER_CONFIRMED {
+	if stateFromVersionNr(allOrdersData[orderType][orderFloor].version_nr) == ORDER_CONFIRMED &&
+		allOrdersData[orderType][orderFloor].assigned_to == MY_ID {
 		allOrdersData[orderType][orderFloor].version_nr += 1
 		if isAloneOnNetwork() {
 			allOrdersData[orderType][orderFloor].version_nr = 0
