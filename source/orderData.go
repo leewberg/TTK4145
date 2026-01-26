@@ -1,7 +1,7 @@
 package elevio
 
 import (
-	// "fmt"
+	"fmt"
 	"sync"
 	"time"
 )
@@ -51,6 +51,11 @@ func computeFullCost(orderData OrderData) float64 {
 	}
 	cost += 0.01 * float64(orderData.assigned_to) // use ID for tiebreaks
 	return cost
+}
+func printOrders() {
+	mutexOD.RLock()
+	defer mutexOD.RUnlock()
+	fmt.Println(allOrdersData)
 }
 
 func InitOrderData() {

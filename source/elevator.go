@@ -59,7 +59,7 @@ func (e *Elevator) Init(ID int, network_ID string) {
 func (e *Elevator) elev_open_door() {
 	SetMotorDirection(MD_Stop)
 	SetDoorOpenLamp(true)
-	if time.Since(e.doorOpenTime) > DOOR_OPEN_TIME*time.Second { //doors have been open for 3+ seconds
+	if time.Since(e.doorOpenTime) > DOOR_OPEN_TIME*time.Millisecond { //doors have been open for 3+ seconds
 		if e.switched {
 			e.direction = e.direction / (-1)
 			e.switched = false

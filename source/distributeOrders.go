@@ -134,6 +134,7 @@ func assignOrders() {
 	}
 
 	// hall orders
+	// TODO: For improved efficiency: rebid. start new bidding time if your that much better
 	for _, orderType := range []OrderType{HALL_UP, HALL_DOWN} {
 		for floor := range NUM_FLOORS {
 
@@ -150,10 +151,13 @@ func assignOrders() {
 				time.Now().UnixMilli()-order.assigned_at_time < BIDDING_TIME {
 
 				cost := costFunction(orderType, floor)
+				// fmt.Println("Bidding with cost", cost)
 				if cost+BIDDING_MIN_RAISE < order.assigned_cost {
 					AssignOrder(orderType, floor, cost)
 				}
 			}
 		}
 	}
+	// printOrders()
+	// fmt.Println(LocalElevator.state)
 }
