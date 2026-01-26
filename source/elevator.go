@@ -105,15 +105,6 @@ func (e *Elevator) elev_idle() {
 		SetDoorOpenLamp(false)
 		e.state = ELEV_RUNNING
 	}
-	/*	if e.check_turn() == NO_FIND {
-			if e.check_turn() != NO_FIND {
-				SetDoorOpenLamp(false)
-				e.state = ELEV_RUNNING
-			}
-		} else {
-			SetDoorOpenLamp(false)
-			e.state = ELEV_RUNNING
-		}*/
 	declareElevatorFunctional()
 }
 
