@@ -18,7 +18,6 @@ const (
 	ELEV_BOOT elev_states = iota
 	ELEV_IDLE
 	ELEV_RUNNING
-	ELEV_STOP
 	ELEV_DOOR_OPEN
 )
 
@@ -29,7 +28,6 @@ type Elevator struct {
 	network_ID        string
 	direction         MotorDirection //only up or down, never stop
 	initialized       bool
-	justStopped       bool
 	is_between_floors bool
 	doorOpenTime      time.Time
 	switched          bool
@@ -100,29 +98,10 @@ func (e *Elevator) elev_run() {
 	if e.viable_floor(e.in_floor) && !e.is_between_floors {
 		e.state = ELEV_DOOR_OPEN
 		e.doorOpenTime = time.Now()
-	} /*else {
+	} else {
 		if e.check_turn() == NO_FIND && e.check_turn() == NO_FIND {
 			e.state = ELEV_IDLE
 		}
-	}*/
-}
-
-func (e *Elevator) elev_stop() {
-	SetStopLamp(true)
-	if e.justStopped {
-		a := GetFloor()
-		if a == -1 {
-			for a == -1 {
-				SetMotorDirection(e.direction)
-				a = GetFloor()
-			}
-			e.state = ELEV_DOOR_OPEN
-			e.justStopped = false
-		} else {
-			e.state = ELEV_DOOR_OPEN
-			e.justStopped = false
-		}
-		SetStopLamp(false)
 	}
 }
 
@@ -152,8 +131,6 @@ func (e *Elevator) Elev_routine() {
 			e.elev_open_door()
 		case ELEV_RUNNING:
 			e.elev_run()
-		case ELEV_STOP:
-			e.elev_stop()
 		}
 		time.Sleep(_pollRate)
 	}
@@ -216,6 +193,7 @@ func (e *Elevator) check_turn() exit_type {
 		for i := e.in_floor; i < NUM_FLOORS; i++ {
 			if e.viable_floor(i) {
 				//if any of the floors above are viable
+				e.direction = MD_Up
 				e.switched = true
 				return DIFF_DIR_AV
 			}
