@@ -41,7 +41,6 @@ func (e *Elevator) Init(ID int, network_ID string) {
 	e.network_ID = network_ID
 	e.doorOpenTime = time.Now()
 	e.switched = false
-	//maybe more network init needed, idk
 
 	SetDoorOpenLamp(false)
 	SetStopLamp(false)
@@ -71,9 +70,11 @@ func (e *Elevator) elev_open_door() {
 		}
 		ClearOrder(OrderType(2+e.ID), e.in_floor) //clear cab-order for this elevator
 
-		//check if enter idle mode: run check turn twice. if the direction is the same after two turns (meaning there's no viable orders below or above), we enter idle mode. if there's none above but there are below, the direction will only be flipped once
-		e.switched = false
+		//check if enter idle mode: run check turn twice. if the we don't find any avaliable orders above or below, we enter idle mode. only run second check if first check has no finds, as running the check twice will mess up the direction
 		if !GetObstruction() { //last check before exiting door-open state
+			if e.switched {
+				e.direction = e.direction / (-1)
+			}
 			if e.check_turn() == NO_FIND {
 				if e.check_turn() != NO_FIND {
 					SetDoorOpenLamp(false)
@@ -89,7 +90,6 @@ func (e *Elevator) elev_open_door() {
 			SetDoorOpenLamp(false)
 		}
 	}
-
 }
 
 func (e *Elevator) elev_run() {
@@ -99,7 +99,11 @@ func (e *Elevator) elev_run() {
 	if e.viable_floor(e.in_floor) && !e.is_between_floors {
 		e.state = ELEV_DOOR_OPEN
 		e.doorOpenTime = time.Now()
-	}
+	} /*else {
+		if e.check_turn() == NO_FIND && e.check_turn() == NO_FIND {
+			e.state = ELEV_IDLE
+		}
+	}*/
 }
 
 func (e *Elevator) elev_stop() {
@@ -119,7 +123,6 @@ func (e *Elevator) elev_stop() {
 		}
 		SetStopLamp(false)
 	}
-	//turn off all lights ? see task specification when it comes out later
 }
 
 func (e *Elevator) elev_idle() {
@@ -185,6 +188,7 @@ func (e *Elevator) check_turn() exit_type {
 			if e.viable_floor(i) {
 				//if any of the floors above are viable
 				e.switched = false
+				//e.direction = MD_Up
 				return SAME_DIR_AV
 			}
 		}
@@ -203,6 +207,7 @@ func (e *Elevator) check_turn() exit_type {
 		for i := e.in_floor; i >= 0; i-- {
 			if e.viable_floor(i) {
 				//if any of the floors below are viable
+				e.direction = MD_Down
 				e.switched = false
 				return SAME_DIR_AV
 			}

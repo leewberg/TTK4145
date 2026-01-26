@@ -29,7 +29,6 @@ func ButtonRoutine(e *Elevator) {
 			}
 
 		case a := <-drv_floors:
-			// fmt.Printf("%+v\n", a)
 			if a != -1 { //update floor for elevator object if in a floor and not between floors
 				e.in_floor = a
 				SetFloorIndicator(a)
@@ -53,11 +52,6 @@ func ButtonRoutine(e *Elevator) {
 				}
 			}
 			fmt.Printf("%+v\n", a)
-			/*for f := 0; f < NUM_FLOORS; f++ {
-				for b := ButtonType(0); b < 3; b++ {
-					SetButtonLamp(b, f, false)
-				}
-			}*/
 		}
 	}
 
