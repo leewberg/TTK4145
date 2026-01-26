@@ -19,16 +19,15 @@ func main() {
 
 	elevio.Init("localhost:"+strconv.Itoa(15657+elevio.MY_ID), elevio.NUM_FLOORS)
 
-	elevio.LocalElevator.Init(elevio.MY_ID, "dummystring")
 	elevio.InitOrderData()
 	elevio.InitElevatorData()
 	elevio.InitFunctionalTimes()
+	elevio.LocalElevator.Init(elevio.MY_ID, "dummystring")
 
 	time.Sleep(100 * time.Millisecond)
 	elevio.StartNetwork(1)
 	go elevio.ButtonRoutine(&elevio.LocalElevator)
 	go elevio.LocalElevator.Elev_routine()
-	go elevio.LocalElevator.Hability_routine()
 	go elevio.Light_routine(&elevio.LocalElevator)
 	for {
 	}

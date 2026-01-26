@@ -1,6 +1,9 @@
 package elevio
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 func ButtonRoutine(e *Elevator) {
 	var drv_buttons = make(chan ButtonEvent)
@@ -27,6 +30,7 @@ func ButtonRoutine(e *Elevator) {
 			// fmt.Printf("%+v\n", a)
 			if a != -1 { //update floor for elevator object if in a floor and not between floors
 				e.in_floor = a
+				SetFloorIndicator(a)
 				e.is_between_floors = false
 			} else {
 				e.is_between_floors = true
@@ -35,9 +39,7 @@ func ButtonRoutine(e *Elevator) {
 		case a := <-drv_obstr:
 			fmt.Printf("%+v\n", a)
 			if a {
-				e.obstacle = true
-			} else {
-				e.obstacle = false
+				e.doorOpenTime = time.Now()
 			}
 
 		case a := <-drv_stop:
