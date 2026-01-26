@@ -74,6 +74,7 @@ func (e *Elevator) elev_open_door() {
 		if !GetObstruction() { //last check before exiting door-open state
 			if e.switched {
 				e.direction = e.direction / (-1)
+				e.switched = false
 			}
 			if e.check_turn() == NO_FIND {
 				if e.check_turn() != NO_FIND {
