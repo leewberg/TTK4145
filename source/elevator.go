@@ -88,8 +88,8 @@ func (e *Elevator) elev_run() {
 
 func (e *Elevator) elev_idle() {
 	SetMotorDirection(MD_Stop)
-	SetDoorOpenLamp(false)
-	if !e.enter_idle() {
+	SetDoorOpenLamp(true)
+	if !e.enter_idle() && !GetObstruction() {
 		SetDoorOpenLamp(false)
 		e.state = ELEV_RUNNING
 	}
