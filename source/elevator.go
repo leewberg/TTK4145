@@ -76,12 +76,14 @@ func (e *Elevator) elev_open_door() {
 func (e *Elevator) elev_run() {
 	// fmt.Println("Dir", e.direction)
 	SetMotorDirection(e.direction)
-	if e.viable_floor(e.in_floor) && !e.is_between_floors {
-		e.state = ELEV_DOOR_OPEN
-		e.doorOpenTime = time.Now()
-	} else {
-		if e.enter_idle() {
-			e.state = ELEV_IDLE
+	if !e.is_between_floors {
+		if e.viable_floor(e.in_floor) {
+			e.state = ELEV_DOOR_OPEN
+			e.doorOpenTime = time.Now()
+		} else {
+			if e.enter_idle() {
+				e.state = ELEV_IDLE
+			}
 		}
 	}
 }

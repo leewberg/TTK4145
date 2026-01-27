@@ -2,7 +2,17 @@ package elevio
 
 import "time"
 
-// import "fmt"
+import "fmt"
+
+func forceInBounds(x int, lb int, ub int) int {
+	if x < lb {
+		return lb
+	} else if x > ub {
+		return ub
+	} else {
+		return x
+	}
+}
 
 func costFunction(orderType OrderType, orderFloor int) int {
 	// finds the cost for the elevator to do a spesific order, by simulating execution
@@ -33,7 +43,8 @@ func costFunction(orderType OrderType, orderFloor int) int {
 		duration -= DOOR_OPEN_TIME / 2
 	case ELEV_RUNNING:
 		duration += TRAVEL_TIME / 2
-		elevData.in_floor += int(elevData.direction) // BUG: it can happen that this is down when at 0
+		elevData.in_floor += int(elevData.direction)
+		elevData.in_floor = forceInBounds(elevData.in_floor, 0, NUM_ELEVATORS-1) // BUG: it can happen that this is down when at 0
 	default:
 		elevData.direction = chooseDirection(elevData, simRequests, ourCab)
 		if elevData.direction == MD_Stop {
@@ -190,17 +201,17 @@ func assignOrders() {
 				cost := costFunction(orderType, floor)
 				AssignOrder(orderType, floor, cost)
 
-			} else if stateFromVersionNr(order.version_nr) == ORDER_CONFIRMED && order.assigned_to != MY_ID {
+			} else if stateFromVersionNr(order.version_nr) == ORDER_CONFIRMED &&
+				time.Now().UnixMilli()-order.assigned_at_time < BIDDING_TIME {
 
 				cost := costFunction(orderType, floor)
-				// fmt.Println("Bidding with cost", cost, "on order", orderType, floor)
+				fmt.Println("Bidding with cost", cost, "on order", orderType, floor)
 				if cost+BIDDING_MIN_RAISE < order.assigned_cost && getFunctionalElevators()[MY_ID] {
+					fmt.Println("Got the bid with cost", cost, "on order", orderType, floor)
 					AssignOrder(orderType, floor, cost)
 					workProven()
 				}
 			}
 		}
 	}
-	// printOrders()
-	// fmt.Println(LocalElevator.state)
 }
