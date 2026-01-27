@@ -174,7 +174,6 @@ func assignOrders() {
 		for floor := range NUM_FLOORS {
 
 			order := ReadOrderData(orderType, floor)
-			// fmt.Println(order)
 
 			if stateFromVersionNr(order.version_nr) == ORDER_REQUESTED ||
 				stateFromVersionNr(order.version_nr) == ORDER_CONFIRMED && !isElevFunctional[order.assigned_to] {

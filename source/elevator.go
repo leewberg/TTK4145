@@ -154,7 +154,6 @@ func (e *Elevator) enter_idle() bool {
 }
 
 func (e *Elevator) check_turn() exit_type {
-	fmt.Println("Checked turn")
 	switch e.direction {
 	case MD_Up:
 		for i := e.in_floor; i < NUM_FLOORS; i++ {
