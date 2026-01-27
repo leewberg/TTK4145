@@ -23,6 +23,7 @@ func costFunction(orderType OrderType, orderFloor int) int {
 		}
 	}
 	simRequests[orderType][orderFloor] = true
+	// fmt.Println("we are at", elevData.in_floor, "going", elevData.direction)
 
 	// initial considerations
 	switch elevData.state {
@@ -32,7 +33,7 @@ func costFunction(orderType OrderType, orderFloor int) int {
 		duration -= DOOR_OPEN_TIME / 2
 	case ELEV_RUNNING:
 		duration += TRAVEL_TIME / 2
-		elevData.in_floor += int(elevData.direction)
+		elevData.in_floor += int(elevData.direction) // BUG: it can happen that this is down when at 0
 	default:
 		elevData.direction = chooseDirection(elevData, simRequests, ourCab)
 		if elevData.direction == MD_Stop {
@@ -88,7 +89,7 @@ func requestsAbove(elevData Elevator, simRequests map[OrderType][]bool, ourCab O
 }
 
 func requestsBelow(elevData Elevator, simRequests map[OrderType][]bool, ourCab OrderType) bool {
-	for floor := elevData.in_floor - 1; floor > 0; floor-- {
+	for floor := elevData.in_floor - 1; floor >= 0; floor-- {
 		if anyRequestsAtFloor(floor, simRequests, ourCab) {
 			return true
 		}
@@ -184,17 +185,18 @@ func assignOrders() {
 						continue
 					}
 				}
+				workProven()
 
 				cost := costFunction(orderType, floor)
 				AssignOrder(orderType, floor, cost)
 
-			} else if stateFromVersionNr(order.version_nr) == ORDER_CONFIRMED &&
-				time.Now().UnixMilli()-order.assigned_at_time < BIDDING_TIME {
+			} else if stateFromVersionNr(order.version_nr) == ORDER_CONFIRMED && order.assigned_to != MY_ID {
 
 				cost := costFunction(orderType, floor)
-				// fmt.Println("Bidding with cost", cost)
-				if cost+BIDDING_MIN_RAISE < order.assigned_cost {
+				// fmt.Println("Bidding with cost", cost, "on order", orderType, floor)
+				if cost+BIDDING_MIN_RAISE < order.assigned_cost && getFunctionalElevators()[MY_ID] {
 					AssignOrder(orderType, floor, cost)
+					workProven()
 				}
 			}
 		}

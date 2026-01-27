@@ -103,6 +103,7 @@ func AssignOrder(orderType OrderType, orderFloor int, cost int) {
 
 	isElevFunctional := getFunctionalElevators()
 	if !isElevFunctional[MY_ID] && orderType < CAB_FIRST { // don't assign hall orders if you are dead
+		fmt.Println("rejected on order", orderType, orderFloor)
 		return
 	}
 
@@ -128,7 +129,7 @@ func validState(data OrderData) bool {
 }
 
 func computeFullCost(orderData OrderData) float64 {
-	cost := float64(orderData.assigned_at_time)
+	cost := float64(orderData.assigned_cost)
 	functionalElevators := getFunctionalElevators()
 	if !functionalElevators[orderData.assigned_to] {
 		cost += INF
@@ -167,7 +168,6 @@ func MergeOrder(orderType OrderType, orderFloor int, mergeData OrderData) {
 
 		currentCost := computeFullCost(currentOrder)
 		incomingCost := computeFullCost(mergeData)
-		// keep the epsilon of cost for tiebreaks
 
 		if currentCost > incomingCost {
 			allOrdersData[orderType][orderFloor] = mergeData

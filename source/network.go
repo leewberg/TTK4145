@@ -45,10 +45,10 @@ func StartNetwork(myID int) {
 			<-t.C
 			assignOrders()
 			txWorld <- buildNetWorld(netID)
-			// fmt.Println("State of the order", ReadOrderData(HALL_UP, 1))
-			// fmt.Println("elev 0 functional", getFunctionalElevators()[0])
-			// fmt.Println("elev 0 last work", getLastProofOfWork(0))
-			// fmt.Println("elev 0 last fail", getLastFailedTime(0))
+			// fmt.Println("State of the order", ReadOrderData(HALL_DOWN, 3))
+			// fmt.Println("elev 0 functional", getFunctionalElevators()[MY_ID])
+			// fmt.Println("elev 0 last work", getLastProofOfWork(MY_ID))
+			// fmt.Println("elev 0 last fail", getLastFailedTime(MY_ID))
 		}
 	}()
 

@@ -85,7 +85,7 @@ func getFunctionalElevators() []bool {
 	for elevID := range NUM_ELEVATORS {
 		// in case all nodes but one are dead, we need NUM_ELEVATORS-1 cycles to ensure the one functional node has a chance to grab the order
 		if lastFailedOrderTime[elevID] < lastProofOfWork[elevID] ||
-			now-lastFailedOrderTime[elevID] > (NUM_ELEVATORS-1)*ELEVATOR_TIMEOUT+1000 {
+			now-lastFailedOrderTime[elevID] > (NUM_ELEVATORS)*ELEVATOR_TIMEOUT+1000 {
 			funcElevs[elevID] = true
 		} else {
 			funcElevs[elevID] = false
