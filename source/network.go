@@ -18,7 +18,8 @@ type NetOrder struct {
 type WorldView struct {
 	Sender string `json:"sender"` // which elevetor that sends the message, ex "elev-0"
 
-	FunctionalElevs []int64 `json:"functionals"`
+	ProofOfWork []int64 `json:"proofWork"`
+	LastFailed  []int64 `json:"lastFailed"`
 
 	Orders [][]NetOrder `json:"o"`
 }
@@ -44,7 +45,10 @@ func StartNetwork(myID int) {
 			<-t.C
 			assignOrders()
 			txWorld <- buildNetWorld(netID)
-			// fmt.Println("State of the order", ReadOrderData(HALL_UP, 0))
+			// fmt.Println("State of the order", ReadOrderData(HALL_UP, 1))
+			// fmt.Println("elev 0 functional", getFunctionalElevators()[0])
+			// fmt.Println("elev 0 last work", getLastProofOfWork(0))
+			// fmt.Println("elev 0 last fail", getLastFailedTime(0))
 		}
 	}()
 
@@ -57,24 +61,33 @@ func StartNetwork(myID int) {
 
 			mergeNetWorld(msg)
 			recivedMsg()
-			fmt.Println("Got mst at time", time.Now())
+			// fmt.Println("Got mst at time", time.Now())
 		}
 	}()
 }
 
 func buildNetWorld(sender string) WorldView {
 	w := WorldView{
-		Sender:          sender,
-		FunctionalElevs: snapshotFuncElevators(),
-		Orders:          snapshotOrdersFlat(),
+		Sender:      sender,
+		LastFailed:  snapshotFailedTime(),
+		ProofOfWork: snapshotProofOfWork(),
+		Orders:      snapshotOrdersFlat(),
 	}
 	return w
 }
 
-func snapshotFuncElevators() []int64 {
+func snapshotFailedTime() []int64 {
 	out := make([]int64, NUM_ELEVATORS)
 	for i := 0; i < NUM_ELEVATORS; i++ {
-		out[i] = readElevatorFunctional(i)
+		out[i] = getLastFailedTime(i)
+	}
+	return out
+}
+
+func snapshotProofOfWork() []int64 {
+	out := make([]int64, NUM_ELEVATORS)
+	for i := 0; i < NUM_ELEVATORS; i++ {
+		out[i] = getLastProofOfWork(i)
 	}
 	return out
 }
@@ -100,8 +113,8 @@ func snapshotOrdersFlat() [][]NetOrder {
 
 func mergeNetWorld(in WorldView) {
 	// Merge elevators
-	for ID, e := range in.FunctionalElevs {
-		mergeElevFunctionalData(ID, e)
+	for ID := range in.ProofOfWork {
+		mergeElevFunctionalData(ID, in.ProofOfWork[ID], in.LastFailed[ID])
 	}
 
 	// Merge orders

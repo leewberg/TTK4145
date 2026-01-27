@@ -95,22 +95,6 @@ func (e *Elevator) elev_idle() {
 	}
 }
 
-func (e *Elevator) Elev_functional() {
-	// acceptance tests for elevator working.
-	// note that for the moving state, elevators are declared functional in the button pollers
-	switch e.state {
-	case ELEV_IDLE:
-		if !GetObstruction() { // TODO: && no orders to fulfill
-			declareElevatorFunctional()
-		}
-	case ELEV_DOOR_OPEN:
-		if !GetObstruction() {
-			declareElevatorFunctional()
-		}
-
-	}
-}
-
 func (e *Elevator) Elev_routine() {
 	for {
 		switch e.state {
@@ -123,7 +107,6 @@ func (e *Elevator) Elev_routine() {
 		case ELEV_RUNNING:
 			e.elev_run()
 		}
-		e.Elev_functional()
 		time.Sleep(_pollRate)
 		// fmt.Println("State", e.state)
 	}
