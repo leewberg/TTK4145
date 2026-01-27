@@ -22,13 +22,14 @@ const (
 )
 
 type Elevator struct {
-	state             elev_states
-	in_floor          int
-	ID                int
-	direction         MotorDirection //only up or down, never stop
-	is_between_floors bool
-	doorOpenTime      time.Time
-	switched          bool
+	state              elev_states
+	in_floor           int
+	ID                 int
+	direction          MotorDirection //only up or down, never stop
+	is_between_floors  bool
+	doorOpenTime       time.Time
+	switched           bool
+	timeSinceLastCheck time.Time
 }
 
 func (e *Elevator) Init(ID int) {
@@ -57,11 +58,6 @@ func (e *Elevator) elev_open_door() {
 	SetMotorDirection(MD_Stop)
 	SetDoorOpenLamp(true)
 	if time.Since(e.doorOpenTime) > DOOR_OPEN_TIME*time.Millisecond { //doors have been open for 3+ seconds
-		if e.switched {
-			e.direction = e.direction / (-1)
-			e.switched = false
-		}
-
 		ClearOrder(MDToOrdertype(e.direction), e.in_floor) //clear directional order
 		ClearOrder(OrderType(2+e.ID), e.in_floor)          //clear cab-order for this elevator
 
@@ -157,6 +153,13 @@ func (e *Elevator) viable_floor(floor int) bool {
 
 func (e *Elevator) enter_idle() bool {
 	//checks if the elevator should enter idle-mode
+
+	//needed to avoid elevator switching directions back and forth if both directions would yield to e.switched == true
+	if e.switched {
+		e.direction = e.direction / (-1)
+		e.switched = false
+	}
+
 	if e.check_turn() == NO_FIND {
 		if e.check_turn() != NO_FIND { //only run this twice if you didn't find an avaliable order in the first instance. if you run it twice you risk messing up the resulting directions
 			return false
