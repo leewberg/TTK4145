@@ -1,7 +1,7 @@
 package elevio
 
 import (
-	// "fmt"
+	"fmt"
 	"sync"
 	"time"
 )
@@ -52,6 +52,11 @@ func computeFullCost(orderData OrderData) float64 {
 	cost += 0.01 * float64(orderData.assigned_to) // use ID for tiebreaks
 	return cost
 }
+func printOrders() {
+	mutexOD.RLock()
+	defer mutexOD.RUnlock()
+	fmt.Println(allOrdersData)
+}
 
 func InitOrderData() {
 	mutexOD.Lock()
@@ -85,9 +90,10 @@ func ClearOrder(orderType OrderType, orderFloor int) {
 	mutexOD.Lock()
 	defer mutexOD.Unlock()
 
-	if stateFromVersionNr(allOrdersData[orderType][orderFloor].version_nr) == ORDER_CONFIRMED {
+	if stateFromVersionNr(allOrdersData[orderType][orderFloor].version_nr) == ORDER_CONFIRMED &&
+		allOrdersData[orderType][orderFloor].assigned_to == MY_ID {
 		allOrdersData[orderType][orderFloor].version_nr += 1
-		if false && isAloneOnNetwork() {
+		if isAloneOnNetwork() {
 			allOrdersData[orderType][orderFloor].version_nr = 0
 		}
 	}

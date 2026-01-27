@@ -23,10 +23,7 @@ func main() {
 	// elevio.Clear_all_lights()
 	elevio.InitOrderData()
 	elevio.InitFunctionalTimes()
-	go elevio.Light_routine(elevio.MY_ID)
-	elevio.StartNetwork(elevio.MY_ID)
-
-	elevio.LocalElevator.Init(elevio.MY_ID, "dummystring")
+	elevio.LocalElevator.Init(elevio.MY_ID)
 
 	time.Sleep(100 * time.Millisecond)
 	go elevio.ButtonRoutine(&elevio.LocalElevator)
