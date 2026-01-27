@@ -43,15 +43,6 @@ func stateFromVersionNr(order_version_nr int) OrderState {
 	}
 }
 
-func computeFullCost(orderData OrderData) float64 {
-	cost := float64(orderData.assigned_cost)
-	functionalElevators := getFunctionalElevators()
-	if !functionalElevators[orderData.assigned_to] {
-		cost += INF
-	}
-	cost += 0.01 * float64(orderData.assigned_to) // use ID for tiebreaks
-	return cost
-}
 func printOrders() {
 	mutexOD.RLock()
 	defer mutexOD.RUnlock()
@@ -93,6 +84,7 @@ func ClearOrder(orderType OrderType, orderFloor int) {
 	if stateFromVersionNr(allOrdersData[orderType][orderFloor].version_nr) == ORDER_CONFIRMED &&
 		allOrdersData[orderType][orderFloor].assigned_to == MY_ID {
 		allOrdersData[orderType][orderFloor].version_nr += 1
+		workProven()
 		if isAloneOnNetwork() {
 			allOrdersData[orderType][orderFloor].version_nr = 0
 		}
@@ -135,6 +127,16 @@ func validState(data OrderData) bool {
 	return true
 }
 
+func computeFullCost(orderData OrderData) float64 {
+	cost := float64(orderData.assigned_at_time)
+	functionalElevators := getFunctionalElevators()
+	if !functionalElevators[orderData.assigned_to] {
+		cost += INF
+	}
+	cost += 0.1 * float64(orderData.assigned_to) // use ID for tiebreaks
+	return cost
+}
+
 func MergeOrder(orderType OrderType, orderFloor int, mergeData OrderData) {
 	mutexOD.Lock()
 	defer mutexOD.Unlock()
@@ -165,6 +167,7 @@ func MergeOrder(orderType OrderType, orderFloor int, mergeData OrderData) {
 
 		currentCost := computeFullCost(currentOrder)
 		incomingCost := computeFullCost(mergeData)
+		// keep the epsilon of cost for tiebreaks
 
 		if currentCost > incomingCost {
 			allOrdersData[orderType][orderFloor] = mergeData

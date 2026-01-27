@@ -36,7 +36,7 @@ func costFunction(orderType OrderType, orderFloor int) int {
 	default:
 		elevData.direction = chooseDirection(elevData, simRequests, ourCab)
 		if elevData.direction == MD_Stop {
-			return duration
+			return duration + DOOR_OPEN_TIME
 		}
 	}
 
@@ -159,7 +159,6 @@ func chooseDirection(elevData Elevator, simRequests map[OrderType][]bool, ourCab
 }
 
 func assignOrders() {
-	isElevFunctional := getFunctionalElevators()
 
 	// cab orders
 	for floor := range NUM_FLOORS {
@@ -176,7 +175,15 @@ func assignOrders() {
 			order := ReadOrderData(orderType, floor)
 
 			if stateFromVersionNr(order.version_nr) == ORDER_REQUESTED ||
-				stateFromVersionNr(order.version_nr) == ORDER_CONFIRMED && !isElevFunctional[order.assigned_to] {
+				(stateFromVersionNr(order.version_nr) == ORDER_CONFIRMED &&
+					time.Now().UnixMilli()-getLastProofOfWork(order.assigned_to) > ELEVATOR_TIMEOUT) {
+
+				if stateFromVersionNr(order.version_nr) == ORDER_CONFIRMED {
+					orderFailed(order.assigned_to)
+					if order.assigned_to == MY_ID {
+						continue
+					}
+				}
 
 				cost := costFunction(orderType, floor)
 				AssignOrder(orderType, floor, cost)

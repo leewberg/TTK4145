@@ -28,7 +28,7 @@ func ButtonRoutine(e *Elevator) {
 		case a := <-drv_floors:
 			if a != -1 { //update floor for elevator object if in a floor and not between floors
 				if e.is_between_floors && e.in_floor != a { //moved into a new floor
-					declareElevatorFunctional()
+					workProven()
 				}
 
 				e.in_floor = a
