@@ -26,10 +26,8 @@ func main() {
 	elevio.LocalElevator.Init(elevio.MY_ID)
 
 	time.Sleep(100 * time.Millisecond)
-	elevio.StartNetwork(elevio.MY_ID)
 	go elevio.ButtonRoutine(&elevio.LocalElevator)
 	go elevio.LocalElevator.Elev_routine()
-	go elevio.Light_routine(&elevio.LocalElevator)
 	for {
 	}
 
