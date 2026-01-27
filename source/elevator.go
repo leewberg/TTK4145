@@ -49,7 +49,6 @@ func (e *Elevator) Init(ID int) {
 	e.direction = MD_Up
 	SetDoorOpenLamp(false)
 	SetStopLamp(false)
-	declareElevatorFunctional()
 
 	e.state = ELEV_IDLE
 }
@@ -73,16 +72,14 @@ func (e *Elevator) elev_open_door() {
 				SetDoorOpenLamp(false)
 				e.state = ELEV_RUNNING
 			}
-			declareElevatorFunctional()
 			SetDoorOpenLamp(false)
 		}
 	}
 }
 
 func (e *Elevator) elev_run() {
-	fmt.Println("Dir", e.direction)
+	// fmt.Println("Dir", e.direction)
 	SetMotorDirection(e.direction)
-	declareElevatorFunctional()
 	if e.viable_floor(e.in_floor) && !e.is_between_floors {
 		e.state = ELEV_DOOR_OPEN
 		e.doorOpenTime = time.Now()
@@ -100,7 +97,22 @@ func (e *Elevator) elev_idle() {
 		SetDoorOpenLamp(false)
 		e.state = ELEV_RUNNING
 	}
-	declareElevatorFunctional()
+}
+
+func (e *Elevator) Elev_functional() {
+	// acceptance tests for elevator working.
+	// note that for the moving state, elevators are declared functional in the button pollers
+	switch e.state {
+	case ELEV_IDLE:
+		if !GetObstruction() { // TODO: && no orders to fulfill
+			declareElevatorFunctional()
+		}
+	case ELEV_DOOR_OPEN:
+		if !GetObstruction() {
+			declareElevatorFunctional()
+		}
+
+	}
 }
 
 func (e *Elevator) Elev_routine() {
@@ -115,8 +127,9 @@ func (e *Elevator) Elev_routine() {
 		case ELEV_RUNNING:
 			e.elev_run()
 		}
+		e.Elev_functional()
 		time.Sleep(_pollRate)
-		fmt.Println("State", e.state)
+		// fmt.Println("State", e.state)
 	}
 }
 

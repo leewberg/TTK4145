@@ -57,6 +57,7 @@ func StartNetwork(myID int) {
 
 			mergeNetWorld(msg)
 			recivedMsg()
+			fmt.Println("Got mst at time", time.Now())
 		}
 	}()
 }
