@@ -134,7 +134,6 @@ func assignOrders() {
 	}
 
 	// hall orders
-	// TODO: For improved efficiency: rebid. start new bidding time if your that much better
 	for _, orderType := range []OrderType{HALL_UP, HALL_DOWN} {
 		for floor := range NUM_FLOORS {
 

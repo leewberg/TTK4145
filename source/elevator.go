@@ -25,17 +25,15 @@ type Elevator struct {
 	state             elev_states
 	in_floor          int
 	ID                int
-	network_ID        string
 	direction         MotorDirection //only up or down, never stop
 	is_between_floors bool
 	doorOpenTime      time.Time
 	switched          bool
 }
 
-func (e *Elevator) Init(ID int, network_ID string) {
+func (e *Elevator) Init(ID int) {
 	e.state = ELEV_BOOT
 	e.ID = ID
-	e.network_ID = network_ID
 	e.doorOpenTime = time.Now()
 	e.switched = false
 
@@ -43,9 +41,9 @@ func (e *Elevator) Init(ID int, network_ID string) {
 	SetStopLamp(false)
 
 	a := GetFloor()
-	for a != 0 {
+	if a != 0 {
 		SetMotorDirection(MD_Down)
-		a = GetFloor()
+		return
 	}
 
 	e.direction = MD_Up
@@ -82,6 +80,7 @@ func (e *Elevator) elev_open_door() {
 }
 
 func (e *Elevator) elev_run() {
+	fmt.Println("Dir", e.direction)
 	SetMotorDirection(e.direction)
 	declareElevatorFunctional()
 	if e.viable_floor(e.in_floor) && !e.is_between_floors {
@@ -96,7 +95,7 @@ func (e *Elevator) elev_run() {
 
 func (e *Elevator) elev_idle() {
 	SetMotorDirection(MD_Stop)
-	SetDoorOpenLamp(true)
+	SetDoorOpenLamp(false)
 	if !e.enter_idle() {
 		SetDoorOpenLamp(false)
 		e.state = ELEV_RUNNING
@@ -108,7 +107,7 @@ func (e *Elevator) Elev_routine() {
 	for {
 		switch e.state {
 		case ELEV_BOOT:
-			e.Init(e.ID, e.network_ID)
+			e.Init(e.ID)
 		case ELEV_IDLE:
 			e.elev_idle()
 		case ELEV_DOOR_OPEN:
@@ -117,6 +116,7 @@ func (e *Elevator) Elev_routine() {
 			e.elev_run()
 		}
 		time.Sleep(_pollRate)
+		fmt.Println("State", e.state)
 	}
 }
 
@@ -154,6 +154,7 @@ func (e *Elevator) enter_idle() bool {
 }
 
 func (e *Elevator) check_turn() exit_type {
+	fmt.Println("Checked turn")
 	switch e.direction {
 	case MD_Up:
 		for i := e.in_floor; i < NUM_FLOORS; i++ {
