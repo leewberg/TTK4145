@@ -22,14 +22,14 @@ const (
 )
 
 type Elevator struct {
-	state              elev_states
-	in_floor           int
-	ID                 int
-	direction          MotorDirection //only up or down, never stop
-	is_between_floors  bool
-	doorOpenTime       time.Time
-	switched           bool
-	timeSinceLastCheck time.Time
+	state             elev_states
+	in_floor          int
+	ID                int
+	direction         MotorDirection //only up or down, never stop
+	is_between_floors bool
+	doorOpenTime      time.Time
+	switched          bool
+	currOrderType     OrderType
 }
 
 func (e *Elevator) Init(ID int) {
@@ -58,8 +58,7 @@ func (e *Elevator) elev_open_door() {
 	SetMotorDirection(MD_Stop)
 	SetDoorOpenLamp(true)
 	if time.Since(e.doorOpenTime) > DOOR_OPEN_TIME*time.Millisecond { //doors have been open for 3+ seconds
-		ClearOrder(MDToOrdertype(e.direction), e.in_floor) //clear directional order
-		ClearOrder(OrderType(2+e.ID), e.in_floor)          //clear cab-order for this elevator
+		ClearOrder(e.currOrderType, e.in_floor) //clear order
 
 		if !GetObstruction() { //last check before exiting door-open state
 			if e.enter_idle() {
@@ -116,11 +115,13 @@ func (e *Elevator) viable_floor(floor int) bool {
 	if e.switched {
 		order_dir := ReadOrderData(MDToOrdertype((e.direction)/(-1)), floor)
 		if stateFromVersionNr(order_dir.version_nr) == ORDER_CONFIRMED && order_dir.assigned_to == e.ID && time.Now().UnixMilli()-order_dir.assigned_at_time > BIDDING_TIME {
+			e.currOrderType = MDToOrdertype(e.direction / (-1))
 			return true
 		}
 	} else {
 		order_dir := ReadOrderData(MDToOrdertype(e.direction), floor)
 		if stateFromVersionNr(order_dir.version_nr) == ORDER_CONFIRMED && order_dir.assigned_to == e.ID && time.Now().UnixMilli()-order_dir.assigned_at_time > BIDDING_TIME {
+			e.currOrderType = MDToOrdertype(e.direction)
 			return true
 		}
 	}
@@ -129,6 +130,7 @@ func (e *Elevator) viable_floor(floor int) bool {
 
 	if stateFromVersionNr(order_cab.version_nr) == ORDER_CONFIRMED && order_cab.assigned_to == e.ID && time.Now().UnixMilli()-order_cab.assigned_at_time > BIDDING_TIME {
 		//very messy, but it checks if the order is viable by first checking if the order is confirmed and is assigned to the elevator
+		e.currOrderType = OrderType(2 + e.ID)
 		return true
 	}
 	return false
