@@ -37,6 +37,7 @@ func (e *Elevator) Init(ID int) {
 	e.ID = ID
 	e.doorOpenTime = time.Now()
 	e.switched = false
+	e.currOrderType = HALL_UP
 
 	SetDoorOpenLamp(false)
 	SetStopLamp(false)

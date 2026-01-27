@@ -38,11 +38,9 @@ func ButtonRoutine(e *Elevator) {
 			} else {
 				e.is_between_floors = true
 			}
-
-		case a := <-drv_obstr:
-			if a {
-				e.doorOpenTime = time.Now()
-			}
+		}
+		if GetObstruction() {
+			e.doorOpenTime = time.Now()
 		}
 	}
 
