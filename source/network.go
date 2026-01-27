@@ -45,10 +45,10 @@ func StartNetwork(myID int) {
 			<-t.C
 			assignOrders()
 			txWorld <- buildNetWorld(netID)
-			// fmt.Println("State of the order", ReadOrderData(HALL_DOWN, 3))
-			// fmt.Println("elev 1 functional", getFunctionalElevators()[1])
-			// fmt.Println("elev 1 last work", getLastProofOfWork(1))
-			// fmt.Println("elev 1 last fail", getLastFailedTime(1))
+			// fmt.Println("State of the order", ReadOrderData(HALL_UP, 1))
+			// fmt.Println("elev 0 functional", getFunctionalElevators()[0])
+			// fmt.Println("elev 0 last work", getLastProofOfWork(0))
+			// fmt.Println("elev 0 last fail", getLastFailedTime(0))
 		}
 	}()
 
@@ -113,7 +113,7 @@ func snapshotOrdersFlat() [][]NetOrder {
 
 func mergeNetWorld(in WorldView) {
 	// Merge elevators
-	for ID, _ := range in.ProofOfWork {
+	for ID := range in.ProofOfWork {
 		mergeElevFunctionalData(ID, in.ProofOfWork[ID], in.LastFailed[ID])
 	}
 

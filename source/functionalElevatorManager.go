@@ -1,6 +1,7 @@
 package elevio
 
 import (
+	// "fmt"
 	"sync"
 	"time"
 )
@@ -35,7 +36,7 @@ func orderFailed(elevatorNum int) {
 	mutexLFT.Lock()
 	defer mutexLFT.Unlock()
 
-	lastFailedOrderTime[MY_ID] = time.Now().UnixMilli()
+	lastFailedOrderTime[elevatorNum] = time.Now().UnixMilli()
 }
 
 func getLastProofOfWork(elevatorNum int) int64 {
