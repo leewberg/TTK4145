@@ -2,7 +2,7 @@ package elevio
 
 import "time"
 
-import "fmt"
+// import "fmt"
 
 func forceInBounds(x int, lb int, ub int) int {
 	if x < lb {
@@ -33,7 +33,11 @@ func costFunction(orderType OrderType, orderFloor int) int {
 		}
 	}
 	simRequests[orderType][orderFloor] = true
-	// fmt.Println("we are at", elevData.in_floor, "going", elevData.direction)
+	if elevData.in_floor == NUM_ELEVATORS-1 {
+		elevData.direction = MD_Down
+	} else if elevData.in_floor == 0 {
+		elevData.direction = MD_Up
+	}
 
 	// initial considerations
 	switch elevData.state {
@@ -41,29 +45,25 @@ func costFunction(orderType OrderType, orderFloor int) int {
 		return INF
 	case ELEV_DOOR_OPEN:
 		duration -= DOOR_OPEN_TIME / 2
-	case ELEV_RUNNING:
+	default:
+		elevData.direction, _ = chooseDirection(elevData, simRequests, ourCab, duration)
+	}
+	if elevData.is_between_floors {
 		duration += TRAVEL_TIME / 2
 		elevData.in_floor += int(elevData.direction)
-		elevData.in_floor = forceInBounds(elevData.in_floor, 0, NUM_ELEVATORS-1) // BUG: it can happen that this is down when at 0
-	default:
-		elevData.direction = chooseDirection(elevData, simRequests, ourCab)
-		if elevData.direction == MD_Stop {
-			return duration + DOOR_OPEN_TIME
-		}
 	}
 
 	for {
 		if elevShouldStop(elevData, simRequests, ourCab) {
 
-			// clears all orders for the floor
+			// clears all orders for the floor. TODO: Punish turnarounds also duing clears
 			simulatedClearRequests(elevData, simRequests, ourCab)
 			duration += DOOR_OPEN_TIME
-			elevData.direction = chooseDirection(elevData, simRequests, ourCab)
-			if elevData.direction == MD_Stop {
+			if !simRequests[orderType][orderFloor] {
 				return duration
 			}
+			elevData.direction, _ = chooseDirection(elevData, simRequests, ourCab, duration)
 		}
-		elevData.direction = chooseDirection(elevData, simRequests, ourCab)
 		elevData.in_floor += int(elevData.direction)
 		duration += TRAVEL_TIME
 	}
@@ -130,42 +130,40 @@ func elevShouldStop(elevData Elevator, simRequests map[OrderType][]bool, ourCab 
 		return (simRequests[HALL_UP][elevData.in_floor] ||
 			simRequests[ourCab][elevData.in_floor] ||
 			!requestsAbove(elevData, simRequests, ourCab) ||
-			elevData.in_floor == 0 ||
 			elevData.in_floor >= NUM_ELEVATORS-1)
 	case MD_Down:
 		return (simRequests[HALL_DOWN][elevData.in_floor] ||
 			simRequests[ourCab][elevData.in_floor] ||
 			!requestsBelow(elevData, simRequests, ourCab) ||
-			elevData.in_floor == 0 ||
-			elevData.in_floor >= NUM_ELEVATORS-1)
+			elevData.in_floor == 0)
 	default: // case MD_Stop
 		return true
 	}
 
 }
 
-func chooseDirection(elevData Elevator, simRequests map[OrderType][]bool, ourCab OrderType) MotorDirection {
+func chooseDirection(elevData Elevator, simRequests map[OrderType][]bool, ourCab OrderType, duration int) (MotorDirection, int) {
 	// check for orders in current direction of travel. if there are none, turn around
 	switch elevData.direction {
 	case MD_Up:
 		if requestsAbove(elevData, simRequests, ourCab) {
-			return MD_Up
+			return MD_Up, duration
 		} else if anyRequestsAtFloor(elevData.in_floor, simRequests, ourCab) {
-			return MD_Stop
+			return MD_Stop, duration
 		} else if requestsBelow(elevData, simRequests, ourCab) {
-			return MD_Down
+			return MD_Down, duration
 		} else {
-			return MD_Stop
+			return MD_Stop, duration
 		}
 	default:
 		if requestsBelow(elevData, simRequests, ourCab) {
-			return MD_Down
+			return MD_Down, duration
 		} else if anyRequestsAtFloor(elevData.in_floor, simRequests, ourCab) {
-			return MD_Stop
+			return MD_Stop, duration
 		} else if requestsAbove(elevData, simRequests, ourCab) {
-			return MD_Up
+			return MD_Up, duration
 		} else {
-			return MD_Stop
+			return MD_Stop, duration
 		}
 	}
 }
@@ -196,7 +194,6 @@ func assignOrders() {
 						continue
 					}
 				}
-				workProven()
 
 				cost := costFunction(orderType, floor)
 				AssignOrder(orderType, floor, cost)
@@ -205,11 +202,10 @@ func assignOrders() {
 				time.Now().UnixMilli()-order.assigned_at_time < BIDDING_TIME {
 
 				cost := costFunction(orderType, floor)
-				fmt.Println("Bidding with cost", cost, "on order", orderType, floor)
-				if cost+BIDDING_MIN_RAISE < order.assigned_cost && getFunctionalElevators()[MY_ID] {
-					fmt.Println("Got the bid with cost", cost, "on order", orderType, floor)
+				// fmt.Println("Bidding with cost", cost, "on order", orderType, floor, "against", order.assigned_cost)
+				if cost+BIDDING_MIN_RAISE < order.assigned_cost {
+					// fmt.Println("Got the bid with cost", cost, "on order", orderType, floor)
 					AssignOrder(orderType, floor, cost)
-					workProven()
 				}
 			}
 		}

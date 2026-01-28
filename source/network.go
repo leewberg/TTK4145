@@ -3,6 +3,7 @@ package elevio
 import (
 	"fmt"
 	"heislabb/source/network/bcast"
+	"math/rand/v2"
 	"time"
 )
 
@@ -44,6 +45,9 @@ func StartNetwork(myID int) {
 		for {
 			<-t.C
 			assignOrders()
+			if rand.IntN(2) == 0 {
+				continue
+			}
 			txWorld <- buildNetWorld(netID)
 			// fmt.Println("State of the order", ReadOrderData(HALL_DOWN, 3))
 			// fmt.Println("elev 0 functional", getFunctionalElevators()[MY_ID])
@@ -61,7 +65,7 @@ func StartNetwork(myID int) {
 
 			mergeNetWorld(msg)
 			recivedMsg()
-			// fmt.Println("Got mst at time", time.Now())
+			fmt.Println("Got msg at time", time.Now())
 		}
 	}()
 }
