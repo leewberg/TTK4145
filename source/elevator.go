@@ -80,6 +80,7 @@ func (e *Elevator) elev_run() {
 		e.state = ELEV_DOOR_OPEN
 		e.doorOpenTime = time.Now()
 	} else {
+		fmt.Printf("check if we should enter idle mode\n")
 		if e.enter_idle() {
 			e.state = ELEV_IDLE
 		}
@@ -108,7 +109,7 @@ func (e *Elevator) Elev_routine() {
 			e.elev_run()
 		}
 		time.Sleep(_pollRate)
-		// fmt.Println("State", e.state)
+		//fmt.Println("State", e.state)
 	}
 }
 
@@ -141,10 +142,10 @@ func (e *Elevator) enter_idle() bool {
 	//checks if the elevator should enter idle-mode
 
 	//needed to avoid elevator switching directions back and forth if both directions would yield to e.switched == true
-	if e.switched {
+	/*if e.switched {
 		e.direction = e.direction / (-1)
 		e.switched = false
-	}
+	}*/
 
 	if e.check_turn() == NO_FIND {
 		if e.check_turn() != NO_FIND { //only run this twice if you didn't find an avaliable order in the first instance. if you run it twice you risk messing up the resulting directions
