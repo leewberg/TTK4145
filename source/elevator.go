@@ -94,6 +94,16 @@ func (e *Elevator) elev_run() {
 			e.state = ELEV_IDLE
 		}
 	}
+	switch e.direction {
+	case MD_Up:
+		if e.in_floor == NUM_FLOORS-1 {
+			e.direction = MD_Down
+		}
+	case MD_Down:
+		if e.in_floor == 0 {
+			e.direction = MD_Up
+		}
+	}
 }
 
 func (e *Elevator) elev_idle() {
@@ -122,17 +132,17 @@ func (e *Elevator) Elev_routine() {
 }
 
 func (e *Elevator) viable_floor(floor int) bool {
-	if e.switched {
+	/*if e.switched {
 		if e.isOrderInFloor(MDToOrdertype(e.direction/(-1)), floor) {
 			e.currOrderType = MDToOrdertype(e.direction / (-1))
 			return true
 		}
-	} else {
-		if e.isOrderInFloor(MDToOrdertype(e.direction), floor) {
-			e.currOrderType = MDToOrdertype(e.direction)
-			return true
-		}
+	} else {*/
+	if e.isOrderInFloor(MDToOrdertype(e.direction), floor) {
+		e.currOrderType = MDToOrdertype(e.direction)
+		return true
 	}
+	//	}
 
 	if e.isOrderInFloor(OrderType(2+e.ID), floor) {
 		//very messy, but it checks if the order is viable by first checking if the order is confirmed and is assigned to the elevator
