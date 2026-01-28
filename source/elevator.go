@@ -30,6 +30,7 @@ type Elevator struct {
 	doorOpenTime      time.Time
 	switched          bool
 	shouldStop        bool
+	orderDir          MotorDirection
 }
 
 func (e *Elevator) Init(ID int) {
@@ -62,9 +63,20 @@ func (e *Elevator) elev_open_door() {
 	SetDoorOpenLamp(true)
 	if time.Since(e.doorOpenTime) > DOOR_OPEN_TIME*time.Millisecond { //doors have been open for 3+ seconds
 		//clear orders only when necessary
-		if e.isOrderInFloor(MDToOrdertype(e.direction), e.in_floor) {
-			ClearOrder(MDToOrdertype(e.direction), e.in_floor)
+		/*if e.isOrderInFloor(HALL_UP, e.in_floor) {
+			ClearOrder(HALL_UP, e.in_floor)
+		}*/
+
+		if e.direction == e.orderDir {
+			if e.isOrderInFloor(MDToOrdertype(e.direction), e.in_floor) {
+				ClearOrder(MDToOrdertype(e.direction), e.in_floor)
+			}
+		} else {
+			if e.isOrderInFloor(MDToOrdertype(e.direction/(-1)), e.in_floor) {
+				ClearOrder(MDToOrdertype(e.direction/(-1)), e.in_floor)
+			}
 		}
+
 		if e.isOrderInFloor(OrderType(2+e.ID), e.in_floor) {
 			ClearOrder(OrderType(2+e.ID), e.in_floor)
 		}
@@ -82,7 +94,6 @@ func (e *Elevator) elev_open_door() {
 }
 
 func (e *Elevator) elev_run() {
-	// fmt.Println("Dir", e.direction)
 	SetMotorDirection(e.direction)
 	if e.viable_floor(e.in_floor) && !e.is_between_floors {
 		e.state = ELEV_DOOR_OPEN
@@ -90,18 +101,6 @@ func (e *Elevator) elev_run() {
 	} else {
 		if e.shouldStop {
 			e.state = ELEV_IDLE
-		}
-	}
-
-	//make sure elevator can't exit avaliable floorspace
-	switch e.direction {
-	case MD_Up:
-		if e.in_floor == NUM_FLOORS-1 {
-			e.direction = MD_Down
-		}
-	case MD_Down:
-		if e.in_floor == 0 {
-			e.direction = MD_Up
 		}
 	}
 }
@@ -132,10 +131,15 @@ func (e *Elevator) Elev_routine() {
 }
 
 func (e *Elevator) viable_floor(floor int) bool {
-
 	if e.switched {
+		if e.isOrderInFloor(MDToOrdertype(e.direction/(-1)), floor) {
+			e.orderDir = e.direction / (-1)
+		}
 		return e.isOrderInFloor(OrderType(2+e.ID), floor) || e.isOrderInFloor(MDToOrdertype(e.direction/(-1)), floor)
 	} else {
+		if e.isOrderInFloor(MDToOrdertype(e.direction), floor) {
+			e.orderDir = e.direction
+		}
 		return e.isOrderInFloor(OrderType(2+e.ID), floor) || e.isOrderInFloor(MDToOrdertype(e.direction), floor)
 	}
 }
