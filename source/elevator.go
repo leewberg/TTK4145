@@ -29,7 +29,6 @@ type Elevator struct {
 	is_between_floors bool
 	doorOpenTime      time.Time
 	switched          bool
-	currOrderType     OrderType
 	shouldStop        bool
 }
 
@@ -38,7 +37,6 @@ func (e *Elevator) Init(ID int) {
 	e.ID = ID
 	e.doorOpenTime = time.Now()
 	e.switched = false
-	e.currOrderType = HALL_UP
 	e.shouldStop = false
 
 	SetDoorOpenLamp(false)
@@ -68,7 +66,7 @@ func (e *Elevator) elev_open_door() {
 			ClearOrder(MDToOrdertype(e.direction), e.in_floor)
 		}
 		if e.isOrderInFloor(OrderType(2+e.ID), e.in_floor) {
-			ClearOrder(e.currOrderType, e.in_floor)
+			ClearOrder(OrderType(2+e.ID), e.in_floor)
 		}
 
 		if !GetObstruction() { //last check before exiting door-open state
@@ -94,6 +92,8 @@ func (e *Elevator) elev_run() {
 			e.state = ELEV_IDLE
 		}
 	}
+
+	//make sure elevator can't exit avaliable floorspace
 	switch e.direction {
 	case MD_Up:
 		if e.in_floor == NUM_FLOORS-1 {
@@ -132,21 +132,7 @@ func (e *Elevator) Elev_routine() {
 }
 
 func (e *Elevator) viable_floor(floor int) bool {
-	/*if e.switched {
-		if e.isOrderInFloor(MDToOrdertype(e.direction/(-1)), floor) {
-			e.currOrderType = MDToOrdertype(e.direction / (-1))
-			return true
-		}
-	} else {*/
-	if e.isOrderInFloor(MDToOrdertype(e.direction), floor) {
-		e.currOrderType = MDToOrdertype(e.direction)
-		return true
-	}
-	//	}
-
-	if e.isOrderInFloor(OrderType(2+e.ID), floor) {
-		//very messy, but it checks if the order is viable by first checking if the order is confirmed and is assigned to the elevator
-		e.currOrderType = OrderType(2 + e.ID)
+	if e.isOrderInFloor(OrderType(2+e.ID), floor) || e.isOrderInFloor(MDToOrdertype(e.direction), floor) {
 		return true
 	}
 	return false
@@ -154,7 +140,7 @@ func (e *Elevator) viable_floor(floor int) bool {
 
 func (e *Elevator) stopRoutine() {
 	for {
-		for i := 0; i < NUM_FLOORS; i++ {
+		for i := range NUM_FLOORS {
 			if !(e.isOrderInFloor(HALL_UP, i) || !(e.isOrderInFloor(HALL_DOWN, i) || !e.isOrderInFloor(OrderType(2+e.ID), i))) {
 				e.shouldStop = true
 			}
