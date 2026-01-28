@@ -96,8 +96,11 @@ func AssignOrder(orderType OrderType, orderFloor int, cost int) {
 	defer mutexOD.Unlock()
 
 	isElevFunctional := getFunctionalElevators()
-	if !isElevFunctional[MY_ID] && orderType < CAB_FIRST { // don't assign hall orders if you are dead
-		return
+	if orderType < CAB_FIRST { // is hall order
+		if !isElevFunctional[MY_ID] {
+			return
+		}
+		workProven()
 	}
 
 	if stateFromVersionNr(allOrdersData[orderType][orderFloor].version_nr) == ORDER_REQUESTED {
