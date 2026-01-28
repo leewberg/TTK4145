@@ -30,6 +30,7 @@ type Elevator struct {
 	doorOpenTime      time.Time
 	switched          bool
 	currOrderType     OrderType
+	shouldStop        bool
 }
 
 func (e *Elevator) Init(ID int) {
@@ -38,6 +39,7 @@ func (e *Elevator) Init(ID int) {
 	e.doorOpenTime = time.Now()
 	e.switched = false
 	e.currOrderType = HALL_UP
+	e.shouldStop = false
 
 	SetDoorOpenLamp(false)
 	SetStopLamp(false)
@@ -53,13 +55,21 @@ func (e *Elevator) Init(ID int) {
 	SetStopLamp(false)
 
 	e.state = ELEV_IDLE
+
+	go e.stopRoutine()
 }
 
 func (e *Elevator) elev_open_door() {
 	SetMotorDirection(MD_Stop)
 	SetDoorOpenLamp(true)
 	if time.Since(e.doorOpenTime) > DOOR_OPEN_TIME*time.Millisecond { //doors have been open for 3+ seconds
-		ClearOrder(e.currOrderType, e.in_floor) //clear order
+		//clear orders only when necessary
+		if e.isOrderInFloor(MDToOrdertype(e.direction), e.in_floor) {
+			ClearOrder(MDToOrdertype(e.direction), e.in_floor)
+		}
+		if e.isOrderInFloor(OrderType(2+e.ID), e.in_floor) {
+			ClearOrder(e.currOrderType, e.in_floor)
+		}
 
 		if !GetObstruction() { //last check before exiting door-open state
 			if e.enter_idle() {
@@ -80,8 +90,7 @@ func (e *Elevator) elev_run() {
 		e.state = ELEV_DOOR_OPEN
 		e.doorOpenTime = time.Now()
 	} else {
-		fmt.Printf("check if we should enter idle mode\n")
-		if e.enter_idle() {
+		if e.shouldStop {
 			e.state = ELEV_IDLE
 		}
 	}
@@ -109,28 +118,23 @@ func (e *Elevator) Elev_routine() {
 			e.elev_run()
 		}
 		time.Sleep(_pollRate)
-		//fmt.Println("State", e.state)
 	}
 }
 
 func (e *Elevator) viable_floor(floor int) bool {
 	if e.switched {
-		order_dir := ReadOrderData(MDToOrdertype((e.direction)/(-1)), floor)
-		if stateFromVersionNr(order_dir.version_nr) == ORDER_CONFIRMED && order_dir.assigned_to == e.ID && time.Now().UnixMilli()-order_dir.assigned_at_time > BIDDING_TIME {
+		if e.isOrderInFloor(MDToOrdertype(e.direction/(-1)), floor) {
 			e.currOrderType = MDToOrdertype(e.direction / (-1))
 			return true
 		}
 	} else {
-		order_dir := ReadOrderData(MDToOrdertype(e.direction), floor)
-		if stateFromVersionNr(order_dir.version_nr) == ORDER_CONFIRMED && order_dir.assigned_to == e.ID && time.Now().UnixMilli()-order_dir.assigned_at_time > BIDDING_TIME {
+		if e.isOrderInFloor(MDToOrdertype(e.direction), floor) {
 			e.currOrderType = MDToOrdertype(e.direction)
 			return true
 		}
 	}
 
-	order_cab := ReadOrderData(OrderType(2+e.ID), floor)
-
-	if stateFromVersionNr(order_cab.version_nr) == ORDER_CONFIRMED && order_cab.assigned_to == e.ID && time.Now().UnixMilli()-order_cab.assigned_at_time > BIDDING_TIME {
+	if e.isOrderInFloor(OrderType(2+e.ID), floor) {
 		//very messy, but it checks if the order is viable by first checking if the order is confirmed and is assigned to the elevator
 		e.currOrderType = OrderType(2 + e.ID)
 		return true
@@ -138,14 +142,31 @@ func (e *Elevator) viable_floor(floor int) bool {
 	return false
 }
 
+func (e *Elevator) stopRoutine() {
+	for {
+		for i := 0; i < NUM_FLOORS; i++ {
+			if !(e.isOrderInFloor(HALL_UP, i) || !(e.isOrderInFloor(HALL_DOWN, i) || !e.isOrderInFloor(OrderType(2+e.ID), i))) {
+				e.shouldStop = true
+			}
+			e.shouldStop = false
+		}
+		time.Sleep(_pollRate)
+	}
+}
+
+func (e *Elevator) isOrderInFloor(dir OrderType, floor int) bool {
+	order := ReadOrderData(dir, floor)
+	return stateFromVersionNr(order.version_nr) == ORDER_CONFIRMED && order.assigned_to == e.ID && time.Now().UnixMilli()-order.assigned_at_time > BIDDING_TIME
+}
+
 func (e *Elevator) enter_idle() bool {
 	//checks if the elevator should enter idle-mode
 
 	//needed to avoid elevator switching directions back and forth if both directions would yield to e.switched == true
-	/*if e.switched {
+	if e.switched {
 		e.direction = e.direction / (-1)
 		e.switched = false
-	}*/
+	}
 
 	if e.check_turn() == NO_FIND {
 		if e.check_turn() != NO_FIND { //only run this twice if you didn't find an avaliable order in the first instance. if you run it twice you risk messing up the resulting directions
