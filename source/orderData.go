@@ -1,7 +1,7 @@
 package elevio
 
 import (
-	"fmt"
+	// "fmt"
 	"sync"
 	"time"
 )
@@ -41,12 +41,6 @@ func stateFromVersionNr(order_version_nr int) OrderState {
 	} else {
 		return ORDER_CONFIRMED
 	}
-}
-
-func printOrders() {
-	mutexOD.RLock()
-	defer mutexOD.RUnlock()
-	fmt.Println(allOrdersData)
 }
 
 func InitOrderData() {
@@ -102,9 +96,11 @@ func AssignOrder(orderType OrderType, orderFloor int, cost int) {
 	defer mutexOD.Unlock()
 
 	isElevFunctional := getFunctionalElevators()
-	if !isElevFunctional[MY_ID] && orderType < CAB_FIRST { // don't assign hall orders if you are dead
-		fmt.Println("rejected on order", orderType, orderFloor)
-		return
+	if orderType < CAB_FIRST { // is hall order
+		if !isElevFunctional[MY_ID] {
+			return
+		}
+		workProven()
 	}
 
 	if stateFromVersionNr(allOrdersData[orderType][orderFloor].version_nr) == ORDER_REQUESTED {
