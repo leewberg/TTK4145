@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// Module to keep track of the last known functional times of all elevators
+// Module to keep track of the state of functionality of the elevators
 var lastProofOfWork []int64
 var lastFailedOrderTime []int64
 var lastRecivedMsgTime int64 // for figuring out if we are connected to a network. maybe isolate this

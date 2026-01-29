@@ -57,7 +57,7 @@ func costFunction(orderType OrderType, orderFloor int) int {
 		if elevShouldStop(elevData, simRequests, ourCab) {
 
 			// clears all orders for the floor. TODO: Punish turnarounds also duing clears
-			simulatedClearRequests(elevData, simRequests, ourCab)
+			duration = simulatedClearRequests(elevData, simRequests, ourCab, duration)
 			duration += DOOR_OPEN_TIME
 			if !simRequests[orderType][orderFloor] {
 				return duration
@@ -69,7 +69,7 @@ func costFunction(orderType OrderType, orderFloor int) int {
 	}
 }
 
-func simulatedClearRequests(elevData Elevator, simRequests map[OrderType][]bool, ourCab OrderType) {
+func simulatedClearRequests(elevData Elevator, simRequests map[OrderType][]bool, ourCab OrderType, duration int) int {
 	simRequests[ourCab][elevData.in_floor] = false
 	switch elevData.direction {
 	case MD_Up:
@@ -77,17 +77,20 @@ func simulatedClearRequests(elevData Elevator, simRequests map[OrderType][]bool,
 			simRequests[HALL_UP][elevData.in_floor] = false
 		} else if !requestsAbove(elevData, simRequests, ourCab) {
 			simRequests[HALL_DOWN][elevData.in_floor] = false
+			duration += TURN_AROUND_COST
 		}
 	case MD_Down:
 		if simRequests[HALL_DOWN][elevData.in_floor] {
 			simRequests[HALL_DOWN][elevData.in_floor] = false
 		} else if !requestsBelow(elevData, simRequests, ourCab) {
 			simRequests[HALL_UP][elevData.in_floor] = false
+			duration += TURN_AROUND_COST
 		}
 	default: // MD_Stop
 		simRequests[HALL_DOWN][elevData.in_floor] = false
 		simRequests[HALL_UP][elevData.in_floor] = false
 	}
+	return duration
 }
 
 func requestsAbove(elevData Elevator, simRequests map[OrderType][]bool, ourCab OrderType) bool {
@@ -151,7 +154,7 @@ func chooseDirection(elevData Elevator, simRequests map[OrderType][]bool, ourCab
 		} else if anyRequestsAtFloor(elevData.in_floor, simRequests, ourCab) {
 			return MD_Stop, duration
 		} else if requestsBelow(elevData, simRequests, ourCab) {
-			return MD_Down, duration
+			return MD_Down, duration + TURN_AROUND_COST
 		} else {
 			return MD_Stop, duration
 		}
@@ -161,7 +164,7 @@ func chooseDirection(elevData Elevator, simRequests map[OrderType][]bool, ourCab
 		} else if anyRequestsAtFloor(elevData.in_floor, simRequests, ourCab) {
 			return MD_Stop, duration
 		} else if requestsAbove(elevData, simRequests, ourCab) {
-			return MD_Up, duration
+			return MD_Up, duration + TURN_AROUND_COST
 		} else {
 			return MD_Stop, duration
 		}
@@ -198,12 +201,12 @@ func assignOrders() {
 				cost := costFunction(orderType, floor)
 				AssignOrder(orderType, floor, cost)
 
-			} else if stateFromVersionNr(order.version_nr) == ORDER_CONFIRMED &&
-				time.Now().UnixMilli()-order.assigned_at_time < BIDDING_TIME {
+			} else if stateFromVersionNr(order.version_nr) == ORDER_CONFIRMED {
 
 				cost := costFunction(orderType, floor)
 				// fmt.Println("Bidding with cost", cost, "on order", orderType, floor, "against", order.assigned_cost)
-				if cost+BIDDING_MIN_RAISE < order.assigned_cost {
+				if cost+BIDDING_MIN_RAISE < order.assigned_cost &&
+					(time.Now().UnixMilli()-order.assigned_at_time < BIDDING_TIME || cost == DOOR_OPEN_TIME) {
 					// fmt.Println("Got the bid with cost", cost, "on order", orderType, floor)
 					AssignOrder(orderType, floor, cost)
 				}

@@ -64,6 +64,8 @@ func (e *Elevator) elev_open_door() {
 
 		if e.isOrderInFloor(MDToOrdertype(e.direction), e.in_floor) {
 			ClearOrder(MDToOrdertype(e.direction), e.in_floor)
+		} else if e.isOrderInFloor(MDToOrdertype(e.direction/(-1)), e.in_floor) {
+			ClearOrder(MDToOrdertype(e.direction/(-1)), e.in_floor)
 		}
 
 		if e.isOrderInFloor(OrderType(2+e.ID), e.in_floor) {
