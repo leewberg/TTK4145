@@ -30,7 +30,6 @@ type Elevator struct {
 	doorOpenTime      time.Time
 	switched          bool
 	shouldStop        bool
-	orderDir          MotorDirection
 }
 
 func (e *Elevator) Init(ID int) {
@@ -62,19 +61,9 @@ func (e *Elevator) elev_open_door() {
 	SetMotorDirection(MD_Stop)
 	SetDoorOpenLamp(true)
 	if time.Since(e.doorOpenTime) > DOOR_OPEN_TIME*time.Millisecond { //doors have been open for 3+ seconds
-		//clear orders only when necessary
-		/*if e.isOrderInFloor(HALL_UP, e.in_floor) {
-			ClearOrder(HALL_UP, e.in_floor)
-		}*/
 
-		if e.direction == e.orderDir {
-			if e.isOrderInFloor(MDToOrdertype(e.direction), e.in_floor) {
-				ClearOrder(MDToOrdertype(e.direction), e.in_floor)
-			}
-		} else {
-			if e.isOrderInFloor(MDToOrdertype(e.direction/(-1)), e.in_floor) {
-				ClearOrder(MDToOrdertype(e.direction/(-1)), e.in_floor)
-			}
+		if e.isOrderInFloor(MDToOrdertype(e.direction), e.in_floor) {
+			ClearOrder(MDToOrdertype(e.direction), e.in_floor)
 		}
 
 		if e.isOrderInFloor(OrderType(2+e.ID), e.in_floor) {
@@ -132,14 +121,8 @@ func (e *Elevator) Elev_routine() {
 
 func (e *Elevator) viable_floor(floor int) bool {
 	if e.switched {
-		if e.isOrderInFloor(MDToOrdertype(e.direction/(-1)), floor) {
-			e.orderDir = e.direction / (-1)
-		}
 		return e.isOrderInFloor(OrderType(2+e.ID), floor) || e.isOrderInFloor(MDToOrdertype(e.direction/(-1)), floor)
 	} else {
-		if e.isOrderInFloor(MDToOrdertype(e.direction), floor) {
-			e.orderDir = e.direction
-		}
 		return e.isOrderInFloor(OrderType(2+e.ID), floor) || e.isOrderInFloor(MDToOrdertype(e.direction), floor)
 	}
 }
