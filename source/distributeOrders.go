@@ -130,7 +130,7 @@ func elevShouldStop(elevData Elevator, simRequests map[OrderType][]bool, ourCab 
 		return (simRequests[HALL_UP][elevData.in_floor] ||
 			simRequests[ourCab][elevData.in_floor] ||
 			!requestsAbove(elevData, simRequests, ourCab) ||
-			elevData.in_floor >= NUM_ELEVATORS-1)
+			elevData.in_floor >= NUM_FLOORS-1)
 	case MD_Down:
 		return (simRequests[HALL_DOWN][elevData.in_floor] ||
 			simRequests[ourCab][elevData.in_floor] ||
