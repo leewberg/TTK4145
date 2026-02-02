@@ -64,6 +64,8 @@ func (e *Elevator) elev_open_door() {
 
 		if e.isOrderInFloor(MDToOrdertype(e.direction), e.in_floor) {
 			ClearOrder(MDToOrdertype(e.direction), e.in_floor)
+		} else if e.isOrderInFloor(MDToOrdertype(e.direction/(-1)), e.in_floor) && !e.isOrderInFloor(OrderType(2+e.ID), e.in_floor) { //if we're only on an up-order, direction down, the doors shouldn't have to be open for 6 seconds, because that'd be dumb
+			ClearOrder(MDToOrdertype(e.direction/(-1)), e.in_floor)
 		}
 
 		if e.isOrderInFloor(OrderType(2+e.ID), e.in_floor) {
@@ -129,14 +131,20 @@ func (e *Elevator) viable_floor(floor int) bool {
 
 func (e *Elevator) stopRoutine() {
 	for {
+		j := 0
 		for i := range NUM_FLOORS {
-			if !(e.isOrderInFloor(HALL_UP, i) || !(e.isOrderInFloor(HALL_DOWN, i) || !e.isOrderInFloor(OrderType(2+e.ID), i))) {
-				e.shouldStop = true
+			if !e.viable_floor(i) {
+				j++
 			}
+		}
+		if j == NUM_FLOORS {
+			e.shouldStop = true
+		} else {
 			e.shouldStop = false
 		}
 		time.Sleep(_pollRate)
 	}
+
 }
 
 func (e *Elevator) isOrderInFloor(dir OrderType, floor int) bool {
