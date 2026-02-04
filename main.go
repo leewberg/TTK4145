@@ -2,7 +2,10 @@ package main
 
 import (
 	"fmt"
-	elevio "heislabb/source"
+	cfg "heislabb/source/config"
+	db "heislabb/source/database"
+	elevio "heislabb/source/elevio"
+	network "heislabb/source/network"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -22,7 +25,6 @@ func main() {
 func runSupervisor() {
 	// restarts elevator uppon crash
 
-	// make sure the supervisor is not terminated
 	signal.Ignore(syscall.SIGTERM)
 	for {
 
@@ -35,7 +37,7 @@ func runSupervisor() {
 		cmd.Stderr = os.Stderr
 		cmd.Stdin = os.Stdin
 
-		// blocking until worker is killed
+		// blocking until worker terminates
 		err := cmd.Run()
 
 		fmt.Printf("[Supervisor] App crashed or stopped: %v\n", err)
@@ -49,24 +51,24 @@ func elevatorMain() {
 		panic("Need one argument, specifying the ID of this elevator")
 	}
 	var err error
-	elevio.MY_ID, err = strconv.Atoi(os.Args[1])
-	if err != nil || elevio.MY_ID < 0 || elevio.MY_ID >= elevio.NUM_ELEVATORS {
+	cfg.MyID, err = strconv.Atoi(os.Args[1])
+	if err != nil || cfg.MyID < 0 || cfg.MyID >= cfg.NumElevators {
 		panic("ID needs to be an integer between 0 and NUM_ELEVATORS-1")
 	}
 
-	elevio.Init("localhost:"+strconv.Itoa(15657+elevio.MY_ID), elevio.NUM_FLOORS)
+	elevio.Init("localhost:"+strconv.Itoa(15657+cfg.MyID), cfg.NumFloors)
 
 	elevio.Clear_all_lights()
-	elevio.InitOrderData()
-	elevio.InitFunctionalTimes()
-	elevio.LocalElevator.Init(elevio.MY_ID)
+	db.InitOrders()
+	db.InitPeers()
+	elevio.LocalElevator.Init(cfg.MyID)
 
 	time.Sleep(100 * time.Millisecond)
-	elevio.StartNetwork(elevio.MY_ID)
-	go elevio.Light_routine(elevio.MY_ID)
+	network.StartNetwork(cfg.MyID)
+	go elevio.Light_routine(cfg.MyID)
 	go elevio.ButtonRoutine(&elevio.LocalElevator)
 	go elevio.LocalElevator.Elev_routine()
-	for {
-	}
+
+	select {} // blocking without using CPU
 
 }

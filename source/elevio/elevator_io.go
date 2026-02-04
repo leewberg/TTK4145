@@ -2,6 +2,7 @@ package elevio
 
 import (
 	"fmt"
+	cfg "heislabb/source/config"
 	"net"
 	"sync"
 	"time"
@@ -10,7 +11,7 @@ import (
 const _pollRate = 20 * time.Millisecond
 
 var _initialized bool = false
-var _numFloors int = NUM_FLOORS
+var _numFloors int = cfg.NumFloors
 var _mtx sync.Mutex
 var _conn net.Conn
 
