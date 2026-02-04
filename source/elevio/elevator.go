@@ -22,18 +22,20 @@ const (
 )
 
 type Elevator struct {
-	state             elev_states
-	in_floor          int
+	State             elev_states
+	In_floor          int
 	ID                int
-	direction         MotorDirection //only up or down, never stop
-	is_between_floors bool
+	Direction         MotorDirection //only up or down, never stop
+	Is_between_floors bool
 	doorOpenTime      time.Time
 	switched          bool
 	shouldStop        bool
 }
 
+var LocalElevator Elevator
+
 func (e *Elevator) Init(ID int) {
-	e.state = ELEV_BOOT
+	e.State = ELEV_BOOT
 	e.ID = ID
 	e.doorOpenTime = time.Now()
 	e.switched = false
@@ -48,11 +50,11 @@ func (e *Elevator) Init(ID int) {
 		return
 	}
 
-	e.direction = MD_Up
+	e.Direction = MD_Up
 	SetDoorOpenLamp(false)
 	SetStopLamp(false)
 
-	e.state = ELEV_IDLE
+	e.State = ELEV_IDLE
 
 	go e.stopRoutine()
 }
@@ -62,20 +64,20 @@ func (e *Elevator) elev_open_door() {
 	SetDoorOpenLamp(true)
 	if time.Since(e.doorOpenTime) > DOOR_OPEN_TIME*time.Millisecond { //doors have been open for 3+ seconds
 
-		if e.isOrderInFloor(MDToOrdertype(e.direction), e.in_floor) {
-			ClearOrder(MDToOrdertype(e.direction), e.in_floor)
+		if e.isOrderInFloor(MDToOrdertype(e.Direction), e.In_floor) {
+			ClearOrder(MDToOrdertype(e.Direction), e.In_floor)
 		}
 
-		if e.isOrderInFloor(OrderType(2+e.ID), e.in_floor) {
-			ClearOrder(OrderType(2+e.ID), e.in_floor)
+		if e.isOrderInFloor(OrderType(2+e.ID), e.In_floor) {
+			ClearOrder(OrderType(2+e.ID), e.In_floor)
 		}
 
 		if !GetObstruction() { //last check before exiting door-open state
 			if e.enter_idle() {
-				e.state = ELEV_IDLE
+				e.State = ELEV_IDLE
 			} else {
 				SetDoorOpenLamp(false)
-				e.state = ELEV_RUNNING
+				e.State = ELEV_RUNNING
 			}
 			SetDoorOpenLamp(false)
 		}
@@ -83,13 +85,13 @@ func (e *Elevator) elev_open_door() {
 }
 
 func (e *Elevator) elev_run() {
-	SetMotorDirection(e.direction)
-	if e.viable_floor(e.in_floor) && !e.is_between_floors {
-		e.state = ELEV_DOOR_OPEN
+	SetMotorDirection(e.Direction)
+	if e.viable_floor(e.In_floor) && !e.Is_between_floors {
+		e.State = ELEV_DOOR_OPEN
 		e.doorOpenTime = time.Now()
 	} else {
 		if e.shouldStop {
-			e.state = ELEV_IDLE
+			e.State = ELEV_IDLE
 		}
 	}
 }
@@ -99,13 +101,13 @@ func (e *Elevator) elev_idle() {
 	SetDoorOpenLamp(true)
 	if !e.enter_idle() && !GetObstruction() {
 		SetDoorOpenLamp(false)
-		e.state = ELEV_RUNNING
+		e.State = ELEV_RUNNING
 	}
 }
 
 func (e *Elevator) Elev_routine() {
 	for {
-		switch e.state {
+		switch e.State {
 		case ELEV_BOOT:
 			e.Init(e.ID)
 		case ELEV_IDLE:
@@ -121,9 +123,9 @@ func (e *Elevator) Elev_routine() {
 
 func (e *Elevator) viable_floor(floor int) bool {
 	if e.switched {
-		return e.isOrderInFloor(OrderType(2+e.ID), floor) || e.isOrderInFloor(MDToOrdertype(e.direction/(-1)), floor)
+		return e.isOrderInFloor(OrderType(2+e.ID), floor) || e.isOrderInFloor(MDToOrdertype(e.Direction/(-1)), floor)
 	} else {
-		return e.isOrderInFloor(OrderType(2+e.ID), floor) || e.isOrderInFloor(MDToOrdertype(e.direction), floor)
+		return e.isOrderInFloor(OrderType(2+e.ID), floor) || e.isOrderInFloor(MDToOrdertype(e.Direction), floor)
 	}
 }
 
@@ -149,7 +151,7 @@ func (e *Elevator) enter_idle() bool {
 
 	//needed to avoid elevator switching directions back and forth if both directions would yield to e.switched == true
 	if e.switched {
-		e.direction = e.direction / (-1)
+		e.Direction = e.Direction / (-1)
 		e.switched = false
 	}
 
@@ -163,45 +165,45 @@ func (e *Elevator) enter_idle() bool {
 }
 
 func (e *Elevator) check_turn() exit_type {
-	switch e.direction {
+	switch e.Direction {
 	case MD_Up:
-		for i := e.in_floor; i < NUM_FLOORS; i++ {
+		for i := e.In_floor; i < NUM_FLOORS; i++ {
 			if e.viable_floor(i) {
 				//if any of the floors above are viable
 				e.switched = false
-				e.direction = MD_Up
+				e.Direction = MD_Up
 				return SAME_DIR_AV
 			}
 		}
-		for i := e.in_floor; i >= 0; i-- {
+		for i := e.In_floor; i >= 0; i-- {
 			if e.viable_floor(i) {
 				//if any of the floors below are viable
-				e.direction = MD_Down
+				e.Direction = MD_Down
 				e.switched = true
 				return DIFF_DIR_AV
 			}
 		}
 		e.switched = false
-		e.direction = MD_Down
+		e.Direction = MD_Down
 		return NO_FIND
 	case MD_Down:
-		for i := e.in_floor; i >= 0; i-- {
+		for i := e.In_floor; i >= 0; i-- {
 			if e.viable_floor(i) {
 				//if any of the floors below are viable
-				e.direction = MD_Down
+				e.Direction = MD_Down
 				e.switched = false
 				return SAME_DIR_AV
 			}
 		}
-		for i := e.in_floor; i < NUM_FLOORS; i++ {
+		for i := e.In_floor; i < NUM_FLOORS; i++ {
 			if e.viable_floor(i) {
 				//if any of the floors above are viable
-				e.direction = MD_Up
+				e.Direction = MD_Up
 				e.switched = true
 				return DIFF_DIR_AV
 			}
 		}
-		e.direction = MD_Up
+		e.Direction = MD_Up
 		e.switched = false
 		return NO_FIND
 	}

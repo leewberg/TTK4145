@@ -1,7 +1,8 @@
-package elevio
+package database
 
 import (
 	// "fmt"
+	config "heislabb/source/config"
 	"sync"
 	"time"
 )
@@ -16,44 +17,44 @@ func InitPeers() {
 	mutexLFT.Lock()
 	defer mutexLFT.Unlock()
 
-	lastProofOfWork = make([]int64, NUM_ELEVATORS)
-	lastFailedOrderTime = make([]int64, NUM_ELEVATORS)
+	lastProofOfWork = make([]int64, config.NUM_ELEVATORS)
+	lastFailedOrderTime = make([]int64, config.NUM_ELEVATORS)
 	lastRecivedMsgTime = 0
 
-	for i := range NUM_ELEVATORS {
+	for i := range config.NUM_ELEVATORS {
 		lastProofOfWork[i] = 0
 	}
 }
 
-func workProven() {
+func WorkProven() {
 	mutexLFT.Lock()
 	defer mutexLFT.Unlock()
 
-	lastProofOfWork[MY_ID] = time.Now().UnixMilli()
+	lastProofOfWork[config.MY_ID] = time.Now().UnixMilli()
 }
 
-func orderFailed(elevatorNum int) {
+func OrderFailed(elevatorNum int) {
 	mutexLFT.Lock()
 	defer mutexLFT.Unlock()
 
 	lastFailedOrderTime[elevatorNum] = time.Now().UnixMilli()
 }
 
-func getLastProofOfWork(elevatorNum int) int64 {
+func GetLastProofOfWork(elevatorNum int) int64 {
 	mutexLFT.RLock()
 	defer mutexLFT.RUnlock()
 
 	return lastProofOfWork[elevatorNum]
 }
 
-func getLastFailedTime(elevatorNum int) int64 {
+func GetLastFailedTime(elevatorNum int) int64 {
 	mutexLFT.RLock()
 	defer mutexLFT.RUnlock()
 
 	return lastFailedOrderTime[elevatorNum]
 }
 
-func mergeElevFunctionalData(elevatorNum int, proofOfWork int64, lastFail int64) {
+func MergePeersData(elevatorNum int, proofOfWork int64, lastFail int64) {
 	mutexLFT.Lock()
 	defer mutexLFT.Unlock()
 
@@ -61,7 +62,7 @@ func mergeElevFunctionalData(elevatorNum int, proofOfWork int64, lastFail int64)
 	lastFailedOrderTime[elevatorNum] = max(lastFailedOrderTime[elevatorNum], lastFail)
 }
 
-func recivedMsg() {
+func RecivedMsg() {
 	mutexLFT.Lock()
 	defer mutexLFT.Unlock()
 
@@ -71,20 +72,20 @@ func recivedMsg() {
 func isAloneOnNetwork() bool {
 	mutexLFT.RLock()
 	defer mutexLFT.RUnlock()
-	return time.Now().UnixMilli()-lastRecivedMsgTime > ELEVATOR_TIMEOUT
+	return time.Now().UnixMilli()-lastRecivedMsgTime > config.ELEVATOR_TIMEOUT
 }
 
-func getFunctionalElevators() []bool {
+func GetFunctionalElevators() []bool {
 	mutexLFT.RLock()
 	defer mutexLFT.RUnlock()
 
 	now := time.Now().UnixMilli()
-	funcElevs := make([]bool, NUM_ELEVATORS)
+	funcElevs := make([]bool, config.NUM_ELEVATORS)
 
-	for elevID := range NUM_ELEVATORS {
+	for elevID := range config.NUM_ELEVATORS {
 		// in case all nodes but one are dead, we need NUM_ELEVATORS-1 cycles to ensure the one functional node has a chance to grab the order
 		if lastFailedOrderTime[elevID] < lastProofOfWork[elevID] ||
-			now-lastFailedOrderTime[elevID] > (NUM_ELEVATORS)*ELEVATOR_TIMEOUT+1000 {
+			now-lastFailedOrderTime[elevID] > (config.NUM_ELEVATORS)*config.ELEVATOR_TIMEOUT+1000 {
 			funcElevs[elevID] = true
 		} else {
 			funcElevs[elevID] = false

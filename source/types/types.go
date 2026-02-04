@@ -1,6 +1,4 @@
-package elevio
-
-const INF = 2147483647 // 32 bit signed integer limit
+package types
 
 type OrderState int
 type OrderType int
@@ -16,6 +14,8 @@ const (
 	HALL_DOWN
 	CAB_FIRST
 )
+
+const INF = 2147483647 // 32 bit signed integer limit
 
 type OrderData struct {
 	Version int // contains state info
@@ -49,6 +49,16 @@ func StateFromVersionNr(vnr int) OrderState {
 	if vnr%3 == 0 {
 		return ORDER_CLEAR
 	} else if vnr%3 == 1 {
+		return ORDER_REQUESTED
+	} else {
+		return ORDER_CONFIRMED
+	}
+}
+
+func (od *OrderData) GetState() OrderState {
+	if od.Version%3 == 0 {
+		return ORDER_CLEAR
+	} else if od.Version%3 == 1 {
 		return ORDER_REQUESTED
 	} else {
 		return ORDER_CONFIRMED

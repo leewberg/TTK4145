@@ -65,7 +65,7 @@ func elevatorMain() {
 	go elevio.Light_routine(elevio.MY_ID)
 	go elevio.ButtonRoutine(&elevio.LocalElevator)
 	go elevio.LocalElevator.Elev_routine()
-	for {
-	}
+
+	select {} // blocking without using CPU
 
 }

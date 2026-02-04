@@ -1,8 +1,12 @@
-package elevio
+package network
 
 import (
 	"fmt"
+	assigner "heislabb/source/assignment"
+	config "heislabb/source/config"
+	db "heislabb/source/database"
 	"heislabb/source/network/bcast"
+	types "heislabb/source/types"
 	"math/rand/v2"
 	"time"
 )
@@ -11,18 +15,18 @@ func StartNetwork(myID int) {
 
 	netID := fmt.Sprintf("elev-%d", myID)
 
-	outbox := make(chan WorldView, 16)
-	inbox := make(chan WorldView, 64)
-	go bcast.Transmitter(BCAST_PORT, outbox)
-	go bcast.Receiver(BCAST_PORT, inbox)
+	outbox := make(chan types.WorldView, 16)
+	inbox := make(chan types.WorldView, 64)
+	go bcast.Transmitter(config.BCAST_PORT, outbox)
+	go bcast.Receiver(config.BCAST_PORT, inbox)
 
 	go func() { // sender
-		t := time.NewTicker(BROADCAST_PERIOD * time.Millisecond)
+		t := time.NewTicker(config.BROADCAST_PERIOD * time.Millisecond)
 		defer t.Stop()
 
 		for {
 			<-t.C
-			assignOrders()
+			assigner.AssignOrders()
 			if rand.IntN(2) == 0 { // simulates packet loss
 				continue
 			}
@@ -48,14 +52,14 @@ func StartNetwork(myID int) {
 			}
 
 			mergeNetWorld(msg)
-			recivedMsg()
+			db.RecivedMsg()
 			// fmt.Println("Got msg at time", time.Now())
 		}
 	}()
 }
 
-func getWorldSnapshot(sender string) WorldView {
-	w := WorldView{
+func getWorldSnapshot(sender string) types.WorldView {
+	w := types.WorldView{
 		Sender:      sender,
 		LastFailed:  snapshotFailedTime(),
 		ProofOfWork: snapshotProofOfWork(),
@@ -65,30 +69,30 @@ func getWorldSnapshot(sender string) WorldView {
 }
 
 func snapshotFailedTime() []int64 {
-	out := make([]int64, NUM_ELEVATORS)
-	for i := 0; i < NUM_ELEVATORS; i++ {
-		out[i] = getLastFailedTime(i)
+	out := make([]int64, config.NUM_ELEVATORS)
+	for i := 0; i < config.NUM_ELEVATORS; i++ {
+		out[i] = db.GetLastFailedTime(i)
 	}
 	return out
 }
 
 func snapshotProofOfWork() []int64 {
-	out := make([]int64, NUM_ELEVATORS)
-	for i := 0; i < NUM_ELEVATORS; i++ {
-		out[i] = getLastProofOfWork(i)
+	out := make([]int64, config.NUM_ELEVATORS)
+	for i := 0; i < config.NUM_ELEVATORS; i++ {
+		out[i] = db.GetLastProofOfWork(i)
 	}
 	return out
 }
 
-func snapshotOrdersFlat() [][]OrderSnapshot {
-	types := NUM_ELEVATORS + 2
-	out := make([][]OrderSnapshot, types)
+func snapshotOrdersFlat() [][]types.OrderSnapshot {
+	nTypes := config.NUM_ELEVATORS + 2
+	out := make([][]types.OrderSnapshot, nTypes)
 
-	for t := 0; t < types; t++ {
-		out[t] = make([]OrderSnapshot, NUM_FLOORS)
-		for f := 0; f < NUM_FLOORS; f++ {
-			od := ReadOrderData(OrderType(t), f)
-			out[t][f] = OrderSnapshot{
+	for t := 0; t < nTypes; t++ {
+		out[t] = make([]types.OrderSnapshot, config.NUM_FLOORS)
+		for f := 0; f < config.NUM_FLOORS; f++ {
+			od := db.ReadOrderData(types.OrderType(t), f)
+			out[t][f] = types.OrderSnapshot{
 				Version:     od.Version,
 				Assigned_to: od.AssignedID,
 				Cost:        od.AssignedCost,
@@ -99,24 +103,24 @@ func snapshotOrdersFlat() [][]OrderSnapshot {
 	return out
 }
 
-func mergeNetWorld(in WorldView) {
+func mergeNetWorld(in types.WorldView) {
 	// Merge elevators
 	for ID := range in.ProofOfWork {
-		mergeElevFunctionalData(ID, in.ProofOfWork[ID], in.LastFailed[ID])
+		db.MergePeersData(ID, in.ProofOfWork[ID], in.LastFailed[ID])
 	}
 
 	// Merge orders
-	types := NUM_ELEVATORS + 2
-	if len(in.Orders) < types {
+	nTypes := config.NUM_ELEVATORS + 2
+	if len(in.Orders) < nTypes {
 		return
 	}
-	for t := 0; t < types; t++ {
-		if len(in.Orders[t]) < NUM_FLOORS {
+	for t := 0; t < nTypes; t++ {
+		if len(in.Orders[t]) < config.NUM_FLOORS {
 			continue
 		}
-		for f := 0; f < NUM_FLOORS; f++ {
+		for f := 0; f < config.NUM_FLOORS; f++ {
 			order := in.Orders[t][f]
-			MergeOrder(OrderType(t), f, OrderData{
+			db.MergeOrder(types.OrderType(t), f, types.OrderData{
 				Version:        order.Version,
 				AssignedID:     order.Assigned_to,
 				AssignedCost:   order.Cost,

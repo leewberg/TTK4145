@@ -1,7 +1,6 @@
-package elevio
+package config
 
 var MY_ID int
-var LocalElevator Elevator
 
 const (
 	NUM_ELEVATORS = 3
