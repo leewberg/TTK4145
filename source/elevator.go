@@ -1,7 +1,6 @@
 package elevio
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -28,14 +27,12 @@ type Elevator struct {
 	direction         MotorDirection //only up or down, never stop
 	is_between_floors bool
 	doorOpenTime      time.Time
-	switched          bool
 }
 
 func (e *Elevator) Init(ID int) {
 	e.state = ELEV_BOOT
 	e.ID = ID
 	e.doorOpenTime = time.Now()
-	e.switched = false
 
 	SetDoorOpenLamp(false)
 	SetStopLamp(false)
@@ -62,7 +59,7 @@ func (e *Elevator) elev_open_door() {
 
 		if e.isOrderInFloor(MDToOrdertype(e.direction), e.in_floor) {
 			ClearOrder(MDToOrdertype(e.direction), e.in_floor)
-		} else if e.isOrderInFloor(MDToOrdertype(e.direction*(-1)), e.in_floor) { //if we're only on an up-order, direction down, the doors shouldn't have to be open for 6 seconds, because that'd be dumb
+		} else if e.isOrderInFloor(MDToOrdertype(e.direction*(-1)), e.in_floor) {
 			ClearOrder(MDToOrdertype(e.direction*(-1)), e.in_floor)
 		}
 
@@ -149,12 +146,8 @@ func (e *Elevator) Elev_routine() {
 }
 
 func (e *Elevator) viable_floor(floor int) bool {
-	/*if e.switched {
-		return e.isOrderInFloor(OrderType(2+e.ID), floor) || e.isOrderInFloor(MDToOrdertype(e.direction/(-1)), floor)
-	} else {
-		return e.isOrderInFloor(OrderType(2+e.ID), floor) || e.isOrderInFloor(MDToOrdertype(e.direction), floor)
-	}*/
-	return e.isOrderInFloor(OrderType(2+e.ID), floor) || e.isOrderInFloor(MDToOrdertype(e.direction), floor) //|| e.isOrderInFloor(MDToOrdertype(e.direction/(-1)), floor)
+
+	return e.isOrderInFloor(OrderType(2+e.ID), floor) || e.isOrderInFloor(MDToOrdertype(e.direction), floor)
 }
 
 func (e *Elevator) stopRoutine() bool {
@@ -170,77 +163,6 @@ func (e *Elevator) stopRoutine() bool {
 func (e *Elevator) isOrderInFloor(dir OrderType, floor int) bool {
 	order := ReadOrderData(dir, floor)
 	return stateFromVersionNr(order.version_nr) == ORDER_CONFIRMED && order.assigned_to == e.ID && time.Now().UnixMilli()-order.assigned_at_time > BIDDING_TIME
-}
-
-func (e *Elevator) enter_idle() bool {
-	//checks if the elevator should enter idle-mode
-
-	//needed to avoid elevator switching directions back and forth if both directions would yield to e.switched == true
-	if e.switched {
-		e.direction = e.direction / (-1)
-		e.switched = false
-	}
-
-	if e.check_turn() == NO_FIND {
-		if e.check_turn() != NO_FIND { //only run this twice if you didn't find an avaliable order in the first instance. if you run it twice you risk messing up the resulting directions
-			return false
-		}
-		return true
-	}
-	return false
-}
-
-func (e *Elevator) ordersAbove() bool {
-	for i := e.in_floor; i < NUM_FLOORS; i++ {
-		if e.viable_floor(i) {
-			return true
-		}
-	}
-	return false
-}
-
-func (e *Elevator) ordersBelow() bool {
-	for i := e.in_floor; i >= 0; i-- {
-		if e.viable_floor(i) {
-			return true
-		}
-	}
-	return false
-}
-
-func (e *Elevator) check_turn() exit_type {
-	switch e.direction {
-	case MD_Up:
-		if e.ordersAbove() {
-			e.switched = false
-			e.direction = MD_Up
-			return SAME_DIR_AV
-		}
-		if e.ordersBelow() {
-			e.direction = MD_Down
-			e.switched = true
-			return DIFF_DIR_AV
-		}
-		e.switched = false
-		e.direction = MD_Down
-		return NO_FIND
-	case MD_Down:
-		if e.ordersBelow() {
-			e.direction = MD_Down
-			e.switched = false
-			return SAME_DIR_AV
-		}
-		if e.ordersAbove() {
-			e.direction = MD_Up
-			e.switched = true
-			return DIFF_DIR_AV
-		}
-		e.direction = MD_Up
-		e.switched = false
-		return NO_FIND
-	}
-	fmt.Printf("something went wrong, and we didn't register either up or down direction for elevator. \n")
-	return NO_FIND
 }
 
 func MDToOrdertype(dir MotorDirection) OrderType {
