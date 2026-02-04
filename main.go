@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	config "heislabb/source/config"
+	cfg "heislabb/source/config"
 	db "heislabb/source/database"
 	elevio "heislabb/source/elevio"
 	network "heislabb/source/network"
@@ -51,21 +51,21 @@ func elevatorMain() {
 		panic("Need one argument, specifying the ID of this elevator")
 	}
 	var err error
-	config.MY_ID, err = strconv.Atoi(os.Args[1])
-	if err != nil || config.MY_ID < 0 || config.MY_ID >= config.NUM_ELEVATORS {
+	cfg.MyID, err = strconv.Atoi(os.Args[1])
+	if err != nil || cfg.MyID < 0 || cfg.MyID >= cfg.NumElevators {
 		panic("ID needs to be an integer between 0 and NUM_ELEVATORS-1")
 	}
 
-	elevio.Init("localhost:"+strconv.Itoa(15657+config.MY_ID), config.NUM_FLOORS)
+	elevio.Init("localhost:"+strconv.Itoa(15657+cfg.MyID), cfg.NumFloors)
 
 	elevio.Clear_all_lights()
-	db.InitOrderData()
+	db.InitOrders()
 	db.InitPeers()
-	elevio.LocalElevator.Init(config.MY_ID)
+	elevio.LocalElevator.Init(cfg.MyID)
 
 	time.Sleep(100 * time.Millisecond)
-	network.StartNetwork(config.MY_ID)
-	go elevio.Light_routine(config.MY_ID)
+	network.StartNetwork(cfg.MyID)
+	go elevio.Light_routine(cfg.MyID)
 	go elevio.ButtonRoutine(&elevio.LocalElevator)
 	go elevio.LocalElevator.Elev_routine()
 

@@ -2,95 +2,95 @@ package database
 
 import (
 	// "fmt"
-	config "heislabb/source/config"
+	cfg "heislabb/source/config"
 	"sync"
 	"time"
 )
 
 // Module to keep track of liveliness of the elevators
-var lastProofOfWork []int64
-var lastFailedOrderTime []int64
-var lastRecivedMsgTime int64 // for figuring out if we are isolated
-var mutexLFT sync.RWMutex
+var (
+	lastSeen    []int64
+	lastFailure []int64
+	lastPacket  int64 // for figuring out if we are isolated
+	peerMutex   sync.RWMutex
+)
 
 func InitPeers() {
-	mutexLFT.Lock()
-	defer mutexLFT.Unlock()
+	peerMutex.Lock()
+	defer peerMutex.Unlock()
 
-	lastProofOfWork = make([]int64, config.NUM_ELEVATORS)
-	lastFailedOrderTime = make([]int64, config.NUM_ELEVATORS)
-	lastRecivedMsgTime = 0
-
-	for i := range config.NUM_ELEVATORS {
-		lastProofOfWork[i] = 0
-	}
+	lastSeen = make([]int64, cfg.NumElevators)
+	lastFailure = make([]int64, cfg.NumElevators)
 }
 
-func WorkProven() {
-	mutexLFT.Lock()
-	defer mutexLFT.Unlock()
+func Heartbeat() {
+	peerMutex.Lock()
+	defer peerMutex.Unlock()
 
-	lastProofOfWork[config.MY_ID] = time.Now().UnixMilli()
+	lastSeen[cfg.MyID] = time.Now().UnixMilli()
 }
 
-func OrderFailed(elevatorNum int) {
-	mutexLFT.Lock()
-	defer mutexLFT.Unlock()
+func LogFailure(id int) {
+	peerMutex.Lock()
+	defer peerMutex.Unlock()
 
-	lastFailedOrderTime[elevatorNum] = time.Now().UnixMilli()
+	lastFailure[id] = time.Now().UnixMilli()
 }
 
-func GetLastProofOfWork(elevatorNum int) int64 {
-	mutexLFT.RLock()
-	defer mutexLFT.RUnlock()
+func LastSeen(id int) int64 {
+	peerMutex.RLock()
+	defer peerMutex.RUnlock()
 
-	return lastProofOfWork[elevatorNum]
+	return lastSeen[id]
 }
 
-func GetLastFailedTime(elevatorNum int) int64 {
-	mutexLFT.RLock()
-	defer mutexLFT.RUnlock()
+func LastMiss(id int) int64 {
+	peerMutex.RLock()
+	defer peerMutex.RUnlock()
 
-	return lastFailedOrderTime[elevatorNum]
+	return lastFailure[id]
 }
 
-func MergePeersData(elevatorNum int, proofOfWork int64, lastFail int64) {
-	mutexLFT.Lock()
-	defer mutexLFT.Unlock()
+func MergePeerSnapshot(id int, remoteLastSeen int64, remoteLastFail int64) {
+	peerMutex.Lock()
+	defer peerMutex.Unlock()
 
-	lastProofOfWork[elevatorNum] = max(lastProofOfWork[elevatorNum], proofOfWork)
-	lastFailedOrderTime[elevatorNum] = max(lastFailedOrderTime[elevatorNum], lastFail)
+	lastSeen[id] = max(lastSeen[id], remoteLastSeen)
+	lastFailure[id] = max(lastFailure[id], remoteLastFail)
 }
 
-func RecivedMsg() {
-	mutexLFT.Lock()
-	defer mutexLFT.Unlock()
+func ReceivedMsg() {
+	peerMutex.Lock()
+	defer peerMutex.Unlock()
 
-	lastRecivedMsgTime = time.Now().UnixMilli()
+	lastPacket = time.Now().UnixMilli()
 }
 
-func isAloneOnNetwork() bool {
-	mutexLFT.RLock()
-	defer mutexLFT.RUnlock()
-	return time.Now().UnixMilli()-lastRecivedMsgTime > config.ELEVATOR_TIMEOUT
+func isPartitioned() bool {
+	peerMutex.RLock()
+	defer peerMutex.RUnlock()
+	return time.Now().UnixMilli()-lastPacket > cfg.OrderTimeout
 }
 
-func GetFunctionalElevators() []bool {
-	mutexLFT.RLock()
-	defer mutexLFT.RUnlock()
+func ActiveElevators() []bool {
+	peerMutex.RLock()
+	defer peerMutex.RUnlock()
 
 	now := time.Now().UnixMilli()
-	funcElevs := make([]bool, config.NUM_ELEVATORS)
+	activeElevs := make([]bool, cfg.NumElevators)
 
-	for elevID := range config.NUM_ELEVATORS {
+	for id := range cfg.NumElevators {
 		// in case all nodes but one are dead, we need NUM_ELEVATORS-1 cycles to ensure the one functional node has a chance to grab the order
-		if lastFailedOrderTime[elevID] < lastProofOfWork[elevID] ||
-			now-lastFailedOrderTime[elevID] > (config.NUM_ELEVATORS)*config.ELEVATOR_TIMEOUT+1000 {
-			funcElevs[elevID] = true
+
+		isResponsive := lastFailure[id] < lastSeen[id]
+		failuresAreOld := (now - lastFailure[id]) > cfg.NumElevators*cfg.OrderTimeout+1000
+
+		if isResponsive || failuresAreOld {
+			activeElevs[id] = true
 		} else {
-			funcElevs[elevID] = false
+			activeElevs[id] = false
 		}
 	}
 
-	return funcElevs
+	return activeElevs
 }

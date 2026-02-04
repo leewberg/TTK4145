@@ -1,19 +1,19 @@
 package config
 
-var MY_ID int
+var MyID int
 
 const (
-	NUM_ELEVATORS = 3
-	NUM_FLOORS    = 4
+	NumElevators = 3
+	NumFloors    = 4
 
-	BCAST_PORT = 16569
+	BroadcastPort = 16569
 
 	// all ms
-	ELEVATOR_TIMEOUT  = 7000
-	TRAVEL_TIME       = 2500
-	DOOR_OPEN_TIME    = 3000
-	BIDDING_TIME      = 500
-	BIDDING_MIN_RAISE = 100
-	IS_ALONE_TIMEOUT  = 500
-	BROADCAST_PERIOD  = 50
+	OrderTimeout     = 7000
+	TravelTime       = 2500
+	DoorOpenTime     = 3000
+	BiddingTime      = 500
+	BiddingMinRaise  = 100
+	PartitionTimeout = 500
+	BroadcastPeriod  = 50
 )

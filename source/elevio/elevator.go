@@ -2,9 +2,9 @@ package elevio
 
 import (
 	"fmt"
-	config "heislabb/source/config"
+	cfg "heislabb/source/config"
 	db "heislabb/source/database"
-	types "heislabb/source/types"
+	t "heislabb/source/types"
 	"time"
 )
 
@@ -65,14 +65,14 @@ func (e *Elevator) Init(ID int) {
 func (e *Elevator) elev_open_door() {
 	SetMotorDirection(MD_Stop)
 	SetDoorOpenLamp(true)
-	if time.Since(e.doorOpenTime) > config.DOOR_OPEN_TIME*time.Millisecond { //doors have been open for 3+ seconds
+	if time.Since(e.doorOpenTime) > cfg.DoorOpenTime*time.Millisecond { //doors have been open for 3+ seconds
 
 		if e.isOrderInFloor(MDToOrdertype(e.Direction), e.In_floor) {
 			db.ClearOrder(MDToOrdertype(e.Direction), e.In_floor)
 		}
 
-		if e.isOrderInFloor(types.GetMyCab(config.MY_ID), e.In_floor) {
-			db.ClearOrder(types.GetMyCab(config.MY_ID), e.In_floor)
+		if e.isOrderInFloor(t.GetMyCab(cfg.MyID), e.In_floor) {
+			db.ClearOrder(t.GetMyCab(cfg.MyID), e.In_floor)
 		}
 
 		if !GetObstruction() { //last check before exiting door-open state
@@ -126,16 +126,16 @@ func (e *Elevator) Elev_routine() {
 
 func (e *Elevator) viable_floor(floor int) bool {
 	if e.switched {
-		return e.isOrderInFloor(types.GetMyCab(config.MY_ID), floor) || e.isOrderInFloor(MDToOrdertype(e.Direction/(-1)), floor)
+		return e.isOrderInFloor(t.GetMyCab(cfg.MyID), floor) || e.isOrderInFloor(MDToOrdertype(e.Direction/(-1)), floor)
 	} else {
-		return e.isOrderInFloor(types.GetMyCab(config.MY_ID), floor) || e.isOrderInFloor(MDToOrdertype(e.Direction), floor)
+		return e.isOrderInFloor(t.GetMyCab(cfg.MyID), floor) || e.isOrderInFloor(MDToOrdertype(e.Direction), floor)
 	}
 }
 
 func (e *Elevator) stopRoutine() {
 	for {
-		for i := range config.NUM_FLOORS {
-			if !(e.isOrderInFloor(types.HALL_UP, i) || !(e.isOrderInFloor(types.HALL_DOWN, i) || !e.isOrderInFloor(types.GetMyCab(config.MY_ID), i))) {
+		for i := range cfg.NumFloors {
+			if !(e.isOrderInFloor(t.HallUp, i) || !(e.isOrderInFloor(t.HallDown, i) || !e.isOrderInFloor(t.GetMyCab(cfg.MyID), i))) {
 				e.shouldStop = true
 			}
 			e.shouldStop = false
@@ -144,9 +144,9 @@ func (e *Elevator) stopRoutine() {
 	}
 }
 
-func (e *Elevator) isOrderInFloor(dir types.OrderType, floor int) bool {
-	order := db.ReadOrderData(dir, floor)
-	return order.GetState() == types.ORDER_CONFIRMED && order.AssignedID == e.ID && time.Now().UnixMilli()-order.AssignedAtTime > config.BIDDING_TIME
+func (e *Elevator) isOrderInFloor(dir t.OrderType, floor int) bool {
+	order := db.GetOrder(dir, floor)
+	return order.GetState() == t.Confirmed && order.AssignedID == e.ID && time.Now().UnixMilli()-order.AssignedTime > cfg.BiddingTime
 }
 
 func (e *Elevator) enter_idle() bool {
@@ -170,7 +170,7 @@ func (e *Elevator) enter_idle() bool {
 func (e *Elevator) check_turn() exit_type {
 	switch e.Direction {
 	case MD_Up:
-		for i := e.In_floor; i < config.NUM_FLOORS; i++ {
+		for i := e.In_floor; i < cfg.NumFloors; i++ {
 			if e.viable_floor(i) {
 				//if any of the floors above are viable
 				e.switched = false
@@ -198,7 +198,7 @@ func (e *Elevator) check_turn() exit_type {
 				return SAME_DIR_AV
 			}
 		}
-		for i := e.In_floor; i < config.NUM_FLOORS; i++ {
+		for i := e.In_floor; i < cfg.NumFloors; i++ {
 			if e.viable_floor(i) {
 				//if any of the floors above are viable
 				e.Direction = MD_Up
@@ -214,12 +214,12 @@ func (e *Elevator) check_turn() exit_type {
 	return NO_FIND
 }
 
-func MDToOrdertype(dir MotorDirection) types.OrderType {
+func MDToOrdertype(dir MotorDirection) t.OrderType {
 	switch dir {
 	case MD_Up:
-		return types.HALL_UP
+		return t.HallUp
 	case MD_Down:
-		return types.HALL_DOWN
+		return t.HallDown
 	}
 	return 0
 }

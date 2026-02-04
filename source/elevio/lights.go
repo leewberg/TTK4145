@@ -1,14 +1,14 @@
 package elevio
 
 import (
-	config "heislabb/source/config"
+	cfg "heislabb/source/config"
 	db "heislabb/source/database"
-	types "heislabb/source/types"
+	t "heislabb/source/types"
 	"time"
 )
 
 func Clear_all_lights() {
-	for i := range config.NUM_FLOORS {
+	for i := range cfg.NumFloors {
 		//clear hall buttons
 		for j := range 2 {
 			SetButtonLamp(ButtonType(j), i, false)
@@ -20,12 +20,12 @@ func Clear_all_lights() {
 
 func Light_routine(elevID int) {
 	for {
-		for i := range config.NUM_FLOORS {
+		for i := range cfg.NumFloors {
 			//check hall buttons
 			for j := range 2 {
-				order_dir := db.ReadOrderData(types.OrderType(j), i)
+				order_dir := db.GetOrder(t.OrderType(j), i)
 
-				if order_dir.GetState() == types.ORDER_CONFIRMED {
+				if order_dir.GetState() == t.Confirmed {
 					SetButtonLamp(ButtonType(j), i, true)
 				} else {
 					SetButtonLamp(ButtonType(j), i, false)
@@ -33,9 +33,9 @@ func Light_routine(elevID int) {
 				}
 			}
 			//check cab button
-			ourCab := types.GetMyCab(config.MY_ID)
-			order_cab := db.ReadOrderData(ourCab, i)
-			if order_cab.GetState() == types.ORDER_CONFIRMED {
+			ourCab := t.GetMyCab(cfg.MyID)
+			order_cab := db.GetOrder(ourCab, i)
+			if order_cab.GetState() == t.Confirmed {
 				SetButtonLamp(BT_Cab, i, true)
 			} else {
 				SetButtonLamp(BT_Cab, i, false)

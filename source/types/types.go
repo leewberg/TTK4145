@@ -4,63 +4,56 @@ type OrderState int
 type OrderType int
 
 const (
-	ORDER_CLEAR OrderState = iota
-	ORDER_REQUESTED
-	ORDER_CONFIRMED
+	Clear OrderState = iota
+	Requested
+	Confirmed
 )
 
 const (
-	HALL_UP OrderType = iota
-	HALL_DOWN
-	CAB_FIRST
+	HallUp OrderType = iota
+	HallDown
+	CabFirst
 )
 
 const INF = 2147483647 // 32 bit signed integer limit
 
 type OrderData struct {
-	Version int // contains state info
+	Version int `json:"v"` // contains state info
 
 	// only relevant in confirmed state
-	AssignedID     int
-	AssignedCost   int
-	AssignedAtTime int64
+	AssignedID   int   `json:"a"`
+	Cost         int   `json:"c"`
+	AssignedTime int64 `json:"t"`
 }
 
-type OrderSnapshot struct {
-	Version     int   `json:"v"` // version_nr
-	Assigned_to int   `json:"a"` // assigned_to
-	Cost        int   `json:"c"` // assigned_cost
-	Time        int64 `json:"t"` // assigned_at_time
-}
-
-// Full world view snapshot
+// World view snapshot
 type WorldView struct {
-	Sender      string            `json:"sender"`
-	ProofOfWork []int64           `json:"proofWork"`
-	LastFailed  []int64           `json:"lastFailed"`
-	Orders      [][]OrderSnapshot `json:"orders"`
+	Sender   string        `json:"sender"`
+	PeerSeen []int64       `json:"seen"`
+	PeerFail []int64       `json:"fail"`
+	Orders   [][]OrderData `json:"orders"`
 }
 
 func GetMyCab(id int) OrderType {
-	return OrderType(id + int(CAB_FIRST))
+	return OrderType(id + int(CabFirst))
 }
 
 func StateFromVersionNr(vnr int) OrderState {
 	if vnr%3 == 0 {
-		return ORDER_CLEAR
+		return Clear
 	} else if vnr%3 == 1 {
-		return ORDER_REQUESTED
+		return Requested
 	} else {
-		return ORDER_CONFIRMED
+		return Confirmed
 	}
 }
 
 func (od *OrderData) GetState() OrderState {
 	if od.Version%3 == 0 {
-		return ORDER_CLEAR
+		return Clear
 	} else if od.Version%3 == 1 {
-		return ORDER_REQUESTED
+		return Requested
 	} else {
-		return ORDER_CONFIRMED
+		return Confirmed
 	}
 }

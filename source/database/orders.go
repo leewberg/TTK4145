@@ -2,140 +2,144 @@ package database
 
 import (
 	// "fmt"
-	config "heislabb/source/config"
-	types "heislabb/source/types"
+	cfg "heislabb/source/config"
+	t "heislabb/source/types"
 	"sync"
 	"time"
 )
 
-var allOrdersData map[types.OrderType][]types.OrderData
-var mutexOD sync.RWMutex
+var (
+	orders      map[t.OrderType][]t.OrderData
+	ordersMutex sync.RWMutex
+)
 
-func InitOrderData() {
-	mutexOD.Lock()
-	defer mutexOD.Unlock()
+func InitOrders() {
+	ordersMutex.Lock()
+	defer ordersMutex.Unlock()
 
-	if allOrdersData == nil {
-		allOrdersData = make(map[types.OrderType][]types.OrderData)
-	}
+	orders = make(map[t.OrderType][]t.OrderData)
 
-	for orderType := types.HALL_UP; orderType < config.NUM_ELEVATORS+2; orderType++ {
-		allOrdersData[orderType] = make([]types.OrderData, config.NUM_FLOORS)
-		for floor := range config.NUM_FLOORS {
-			allOrdersData[orderType][floor] = types.OrderData{Version: 0, AssignedID: -1, AssignedCost: types.INF, AssignedAtTime: 0}
+	for dir := t.HallUp; dir < cfg.NumElevators+2; dir++ {
+		orders[dir] = make([]t.OrderData, cfg.NumFloors)
+		for floor := range cfg.NumFloors {
+			orders[dir][floor] = t.OrderData{Version: 0, AssignedID: -1, Cost: t.INF, AssignedTime: 0}
 
 		}
 	}
 
 }
 
-func RequestOrder(orderType types.OrderType, orderFloor int) {
-	mutexOD.Lock()
-	defer mutexOD.Unlock()
+func GetOrder(dir t.OrderType, floor int) t.OrderData {
+	ordersMutex.RLock()
+	defer ordersMutex.RUnlock()
+	return orders[dir][floor]
+}
 
-	if types.StateFromVersionNr(allOrdersData[orderType][orderFloor].Version) == types.ORDER_CLEAR {
-		allOrdersData[orderType][orderFloor].Version += 1
+func RequestOrder(dir t.OrderType, floor int) {
+	ordersMutex.Lock()
+	defer ordersMutex.Unlock()
+
+	order := &orders[dir][floor]
+
+	if order.GetState() == t.Clear {
+		order.Version++
 	}
 }
 
-func ClearOrder(orderType types.OrderType, orderFloor int) {
-	// fmt.Println("requesting clear @", orderType, orderFloor)
-	mutexOD.Lock()
-	defer mutexOD.Unlock()
+func AssignOrder(dir t.OrderType, floor int, cost int) {
+	ordersMutex.Lock()
+	defer ordersMutex.Unlock()
 
-	if types.StateFromVersionNr(allOrdersData[orderType][orderFloor].Version) == types.ORDER_CONFIRMED &&
-		allOrdersData[orderType][orderFloor].AssignedID == config.MY_ID {
-		allOrdersData[orderType][orderFloor].Version += 1
-		WorkProven()
-		if isAloneOnNetwork() {
-			allOrdersData[orderType][orderFloor].Version = 0
+	// don't take hall orders if im dead
+	activePeers := ActiveElevators()
+	if dir < t.CabFirst && !activePeers[cfg.MyID] {
+		return
+	}
+
+	order := &orders[dir][floor]
+
+	if order.GetState() == t.Requested {
+		order.Version++ // by assigning the order, we confirm it
+	}
+	if order.GetState() == t.Confirmed {
+		order.Cost = cost
+		order.AssignedID = cfg.MyID
+		order.AssignedTime = time.Now().UnixMilli()
+
+		if dir < t.CabFirst { // taking a hall order prooves im alive
+			Heartbeat()
 		}
 	}
 }
 
-func ReadOrderData(orderType types.OrderType, orderFloor int) types.OrderData {
-	mutexOD.RLock()
-	defer mutexOD.RUnlock()
-	return allOrdersData[orderType][orderFloor]
-}
+func ClearOrder(dir t.OrderType, floor int) {
+	ordersMutex.Lock()
+	defer ordersMutex.Unlock()
 
-func AssignOrder(orderType types.OrderType, orderFloor int, cost int) {
-	mutexOD.Lock()
-	defer mutexOD.Unlock()
+	order := &orders[dir][floor]
 
-	isElevFunctional := GetFunctionalElevators()
-	if orderType < types.CAB_FIRST { // is hall order
-		if !isElevFunctional[config.MY_ID] {
-			return
+	if order.GetState() == t.Confirmed && order.AssignedID == cfg.MyID {
+		order.Version++
+		Heartbeat()
+		if isPartitioned() {
+			order.Version = 0
 		}
-		WorkProven()
-	}
-
-	if allOrdersData[orderType][orderFloor].GetState() == types.ORDER_REQUESTED {
-		allOrdersData[orderType][orderFloor].Version += 1
-		allOrdersData[orderType][orderFloor].AssignedCost = cost
-		allOrdersData[orderType][orderFloor].AssignedID = config.MY_ID
-		allOrdersData[orderType][orderFloor].AssignedAtTime = time.Now().UnixMilli()
-
-	} else if allOrdersData[orderType][orderFloor].GetState() == types.ORDER_CONFIRMED {
-		allOrdersData[orderType][orderFloor].AssignedCost = cost
-		allOrdersData[orderType][orderFloor].AssignedID = config.MY_ID
-		allOrdersData[orderType][orderFloor].AssignedAtTime = time.Now().UnixMilli()
 	}
 }
 
-func validState(data types.OrderData) bool {
-	if data.GetState() == types.ORDER_CONFIRMED &&
-		data.AssignedID == -1 {
+// Consensus logic
+func MergeOrder(dir t.OrderType, floor int, incoming t.OrderData) {
+	ordersMutex.Lock()
+	defer ordersMutex.Unlock()
+
+	if !isValid(incoming) {
+		return
+	}
+
+	current := orders[dir][floor]
+
+	if incoming.Version > current.Version {
+
+		// Stubbornness clause: you should not externally clear an order assigned to this node
+		isMyActiveOrder := current.GetState() == t.Confirmed && current.AssignedID == cfg.MyID
+		incomingHasClearedIt := incoming.GetState() != t.Confirmed
+
+		if isMyActiveOrder && incomingHasClearedIt {
+			// hijack highest priority
+			orders[dir][floor].Version = incoming.Version + (2 - incoming.Version%3)
+
+		} else {
+			orders[dir][floor] = incoming
+
+		}
+
+	} else if incoming.Version == current.Version && incoming.GetState() == t.Confirmed {
+
+		currentCost := resolveCost(current)
+		incomingCost := resolveCost(incoming)
+
+		if currentCost > incomingCost {
+			orders[dir][floor] = incoming
+		}
+
+	}
+}
+
+// Helpers
+func isValid(o t.OrderData) bool {
+	if o.GetState() == t.Confirmed &&
+		o.AssignedID == -1 {
 		return false
 	}
 	return true
 }
 
-func computeFullCost(orderData types.OrderData) int {
-	cost := orderData.AssignedCost
-	functionalElevators := GetFunctionalElevators()
-	if !functionalElevators[orderData.AssignedID] {
-		cost += types.INF
+func resolveCost(o t.OrderData) int {
+	cost := o.Cost
+	active := ActiveElevators()
+	if !active[o.AssignedID] {
+		cost += t.INF
 	}
-	cost += orderData.AssignedID // use ID for tiebreaks. ensure ID < MIN_RAISE
+	cost += o.AssignedID // use ID for tiebreaks. ensure ID < MIN_RAISE
 	return cost
-}
-
-func MergeOrder(orderType types.OrderType, orderFloor int, mergeData types.OrderData) {
-	mutexOD.Lock()
-	defer mutexOD.Unlock()
-
-	if !validState(mergeData) {
-		return
-	}
-
-	currentOrder := allOrdersData[orderType][orderFloor]
-
-	if mergeData.Version > currentOrder.Version {
-
-		// Stubbornness clause: you should not externally clear an order assigned to this node
-		if currentOrder.GetState() == types.ORDER_CONFIRMED &&
-			currentOrder.AssignedID == config.MY_ID &&
-			mergeData.GetState() != types.ORDER_CONFIRMED {
-
-			allOrdersData[orderType][orderFloor].Version = mergeData.Version + (2 - mergeData.Version%3)
-
-		} else {
-
-			allOrdersData[orderType][orderFloor] = mergeData
-
-		}
-
-	} else if mergeData.Version == currentOrder.Version &&
-		mergeData.GetState() == types.ORDER_CONFIRMED {
-
-		currentCost := computeFullCost(currentOrder)
-		incomingCost := computeFullCost(mergeData)
-
-		if currentCost > incomingCost {
-			allOrdersData[orderType][orderFloor] = mergeData
-		}
-
-	}
 }

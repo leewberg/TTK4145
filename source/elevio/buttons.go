@@ -2,9 +2,9 @@ package elevio
 
 import (
 	"fmt"
-	config "heislabb/source/config"
+	cfg "heislabb/source/config"
 	db "heislabb/source/database"
-	types "heislabb/source/types"
+	t "heislabb/source/types"
 	"time"
 )
 
@@ -21,17 +21,17 @@ func ButtonRoutine(e *Elevator) {
 		case a := <-drv_buttons: //hall up, down, or ANY cab button is pressed
 			fmt.Printf("%+v\n", a)
 			if a.Button == BT_HallDown || a.Button == BT_HallUp {
-				db.RequestOrder(types.OrderType(a.Button), a.Floor)
+				db.RequestOrder(t.OrderType(a.Button), a.Floor)
 
 			} else { // cab order: adjust to which panel we order from
-				db.RequestOrder(types.OrderType(a.Button)+types.OrderType(config.MY_ID), a.Floor)
+				db.RequestOrder(t.OrderType(a.Button)+t.OrderType(cfg.MyID), a.Floor)
 
 			}
 
 		case a := <-drv_floors:
 			if a != -1 { //update floor for elevator object if in a floor and not between floors
 				if e.Is_between_floors && e.In_floor != a { //moved into a new floor
-					db.WorkProven()
+					db.Heartbeat()
 				}
 
 				e.In_floor = a
