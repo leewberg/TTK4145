@@ -71,7 +71,22 @@ func (e *Elevator) elev_open_door() {
 		}
 
 		if !GetObstruction() { //last check before exiting door-open state
-			if e.direction == MD_Up {
+			simreq := makeSimReq(OrderType(2 + e.ID))
+			dir, _ := chooseDirection(*e, simreq, OrderType(2+e.ID), 10) //hva skal duration være?
+			if dir != MD_Stop {
+				SetDoorOpenLamp(false)
+				e.direction = dir
+				e.state = ELEV_RUNNING
+			} else {
+				e.state = ELEV_IDLE
+			}
+			if e.enter_idle() {
+				e.state = ELEV_IDLE
+			} else {
+				SetDoorOpenLamp(false)
+				e.state = ELEV_RUNNING
+			}
+			/*if e.direction == MD_Up {
 				fmt.Printf("going up!\n")
 				if e.ordersAbove() {
 					fmt.Printf("there were orders above!\n")
@@ -87,13 +102,7 @@ func (e *Elevator) elev_open_door() {
 					SetDoorOpenLamp(false)
 					return
 				}
-			}
-			if e.enter_idle() {
-				e.state = ELEV_IDLE
-			} else {
-				SetDoorOpenLamp(false)
-				e.state = ELEV_RUNNING
-			}
+			}*/
 		}
 	}
 }
@@ -109,12 +118,50 @@ func (e *Elevator) elev_run() {
 	}
 }
 
+func makeSimReq(ourCab OrderType) map[OrderType][]bool {
+	simRequests := make(map[OrderType][]bool)
+	for _, orderType := range []OrderType{HALL_UP, HALL_DOWN, ourCab} {
+		simRequests[orderType] = make([]bool, NUM_FLOORS)
+		for floor := range NUM_FLOORS {
+			orderData := ReadOrderData(orderType, floor)
+			if stateFromVersionNr(orderData.version_nr) == ORDER_CONFIRMED &&
+				orderData.assigned_to == MY_ID {
+				simRequests[orderType][floor] = true
+			}
+		}
+	}
+	return simRequests
+}
+
 func (e *Elevator) elev_idle() {
-	if !e.enter_idle() && !GetObstruction() {
+	simreq := makeSimReq(OrderType(2 + e.ID))
+	/*if e.direction == MD_Up {
+		if requestsAbove(*e, simreq, OrderType(2+e.ID)) && !GetObstruction() {
+			e.direction = MD_Up
+			e.state = ELEV_RUNNING
+			SetDoorOpenLamp(false)
+			return
+		}
+	} else if e.direction == MD_Down {
+		if requestsBelow(*e, simreq, OrderType(2+e.ID)) && !GetObstruction() {
+			e.direction = MD_Down
+			e.state = ELEV_RUNNING
+			SetDoorOpenLamp(false)
+			return
+		}
+	}*/
+	dir, _ := chooseDirection(*e, simreq, OrderType(2+e.ID), 10) //hva skal duration være?
+	if dir != MD_Stop {
 		SetDoorOpenLamp(false)
+		e.direction = dir
 		e.state = ELEV_RUNNING
 		return
 	}
+	/*if !e.enter_idle() && !GetObstruction() {
+		SetDoorOpenLamp(false)
+		e.state = ELEV_RUNNING
+		return
+	}*/
 	SetDoorOpenLamp(true)
 	SetMotorDirection(MD_Stop)
 }
@@ -185,8 +232,6 @@ func (e *Elevator) ordersAbove() bool {
 	}
 	return false
 }
-
-
 
 func (e *Elevator) ordersBelow() bool {
 	for i := e.in_floor; i >= 0; i-- {
