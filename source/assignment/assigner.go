@@ -43,9 +43,6 @@ func processHallOrder(dir t.OrderType, floor int) {
 	if isNewRequest || hasFailed {
 		if hasFailed {
 			db.LogFailure(order.AssignedID)
-			if order.AssignedID == cfg.MyID {
-				return
-			}
 		}
 
 		myCost := costFunction(dir, floor)
