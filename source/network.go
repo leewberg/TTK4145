@@ -50,6 +50,7 @@ func StartNetwork(myID int) {
 			}
 			txWorld <- buildNetWorld(netID)
 			// fmt.Println("State of the order", ReadOrderData(HALL_DOWN, 3))
+			// fmt.Println("State of the order 2", ReadOrderData(HALL_DOWN, 2))
 			// fmt.Println("elev 0 functional", getFunctionalElevators()[MY_ID])
 			// fmt.Println("elev 0 last work", getLastProofOfWork(MY_ID))
 			// fmt.Println("elev 0 last fail", getLastFailedTime(MY_ID))
@@ -65,7 +66,7 @@ func StartNetwork(myID int) {
 
 			mergeNetWorld(msg)
 			recivedMsg()
-			fmt.Println("Got msg at time", time.Now())
+			// fmt.Println("Got msg at time", time.Now())
 		}
 	}()
 }

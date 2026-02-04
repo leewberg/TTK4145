@@ -85,24 +85,27 @@ func (e *Elevator) elev_open_door() {
 }
 
 func (e *Elevator) elev_run() {
-	SetMotorDirection(e.direction)
 	if e.viable_floor(e.in_floor) && !e.is_between_floors {
 		e.state = ELEV_DOOR_OPEN
 		e.doorOpenTime = time.Now()
+		return
 	} else {
 		if e.shouldStop {
 			e.state = ELEV_IDLE
+			return
 		}
 	}
+	SetMotorDirection(e.direction)
 }
 
 func (e *Elevator) elev_idle() {
-	SetMotorDirection(MD_Stop)
-	SetDoorOpenLamp(true)
 	if !e.enter_idle() && !GetObstruction() {
 		SetDoorOpenLamp(false)
 		e.state = ELEV_RUNNING
+		return
 	}
+	SetMotorDirection(MD_Stop)
+	SetDoorOpenLamp(true)
 }
 
 func (e *Elevator) Elev_routine() {

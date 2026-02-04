@@ -1,7 +1,7 @@
 package elevio
 
 import (
-	// "fmt"
+	"fmt"
 	"sync"
 	"time"
 )
@@ -91,6 +91,18 @@ func ReadOrderData(orderType OrderType, orderFloor int) OrderData {
 	return allOrdersData[orderType][orderFloor]
 }
 
+func updateCost(orderType OrderType, orderFloor int, newCost int) {
+	mutexOD.Lock()
+	defer mutexOD.Unlock()
+	if allOrdersData[orderType][orderFloor].assigned_to == MY_ID {
+		if newCost != allOrdersData[orderType][orderFloor].assigned_cost {
+			fmt.Println("Order", orderType, orderFloor, "assigned to", MY_ID, "updated to", newCost)
+		}
+		allOrdersData[orderType][orderFloor].assigned_cost = newCost
+		allOrdersData[orderType][orderFloor].assigned_at_time += 1 // to ensure this propagates
+	}
+}
+
 func AssignOrder(orderType OrderType, orderFloor int, cost int) {
 	mutexOD.Lock()
 	defer mutexOD.Unlock()
@@ -102,6 +114,7 @@ func AssignOrder(orderType OrderType, orderFloor int, cost int) {
 		}
 		workProven()
 	}
+	fmt.Println("Order", orderType, orderFloor, "assigned to", MY_ID, "at cost", cost)
 
 	if stateFromVersionNr(allOrdersData[orderType][orderFloor].version_nr) == ORDER_REQUESTED {
 		allOrdersData[orderType][orderFloor].version_nr += 1
@@ -124,13 +137,13 @@ func validState(data OrderData) bool {
 	return true
 }
 
-func computeFullCost(orderData OrderData) float64 {
-	cost := float64(orderData.assigned_cost)
+func computeFullCost(orderData OrderData) int64 {
+	cost := orderData.assigned_at_time
 	functionalElevators := getFunctionalElevators()
 	if !functionalElevators[orderData.assigned_to] {
-		cost += INF
+		cost -= INF
 	}
-	cost += 0.1 * float64(orderData.assigned_to) // use ID for tiebreaks
+	// cost += 0.1 * float64(orderData.assigned_to) // use ID for tiebreaks
 	return cost
 }
 
@@ -165,7 +178,7 @@ func MergeOrder(orderType OrderType, orderFloor int, mergeData OrderData) {
 		currentCost := computeFullCost(currentOrder)
 		incomingCost := computeFullCost(mergeData)
 
-		if currentCost > incomingCost {
+		if currentCost < incomingCost {
 			allOrdersData[orderType][orderFloor] = mergeData
 		}
 

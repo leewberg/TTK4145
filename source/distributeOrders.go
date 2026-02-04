@@ -2,7 +2,7 @@ package elevio
 
 import "time"
 
-// import "fmt"
+import "fmt"
 
 func forceInBounds(x int, lb int, ub int) int {
 	if x < lb {
@@ -56,7 +56,7 @@ func costFunction(orderType OrderType, orderFloor int) int {
 	for {
 		if elevShouldStop(elevData, simRequests, ourCab) {
 
-			// clears all orders for the floor. TODO: Punish turnarounds also duing clears
+			// clears all orders for the floor.
 			duration = simulatedClearRequests(elevData, simRequests, ourCab, duration)
 			duration += DOOR_OPEN_TIME
 			if !simRequests[orderType][orderFloor] {
@@ -206,10 +206,12 @@ func assignOrders() {
 				cost := costFunction(orderType, floor)
 				// fmt.Println("Bidding with cost", cost, "on order", orderType, floor, "against", order.assigned_cost)
 				if cost+BIDDING_MIN_RAISE < order.assigned_cost &&
-					(time.Now().UnixMilli()-order.assigned_at_time < BIDDING_TIME || cost == DOOR_OPEN_TIME) {
-					// fmt.Println("Got the bid with cost", cost, "on order", orderType, floor)
+					(time.Now().UnixMilli()-order.assigned_at_time < BIDDING_TIME || true) {
+					fmt.Println("Got the bid with cost", cost, "on order", orderType, floor, "prev cost was", order.assigned_cost)
 					AssignOrder(orderType, floor, cost)
 				}
+
+				updateCost(orderType, floor, cost)
 			}
 		}
 	}
