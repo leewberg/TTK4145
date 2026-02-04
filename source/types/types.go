@@ -38,16 +38,6 @@ func GetMyCab(id int) OrderType {
 	return OrderType(id + int(CabFirst))
 }
 
-func StateFromVersionNr(vnr int) OrderState {
-	if vnr%3 == 0 {
-		return Clear
-	} else if vnr%3 == 1 {
-		return Requested
-	} else {
-		return Confirmed
-	}
-}
-
 func (od *OrderData) GetState() OrderState {
 	if od.Version%3 == 0 {
 		return Clear
