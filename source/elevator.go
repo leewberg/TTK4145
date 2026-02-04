@@ -62,8 +62,8 @@ func (e *Elevator) elev_open_door() {
 
 		if e.isOrderInFloor(MDToOrdertype(e.direction), e.in_floor) {
 			ClearOrder(MDToOrdertype(e.direction), e.in_floor)
-		} else if e.isOrderInFloor(MDToOrdertype(e.direction/(-1)), e.in_floor) && !e.isOrderInFloor(OrderType(2+e.ID), e.in_floor) { //if we're only on an up-order, direction down, the doors shouldn't have to be open for 6 seconds, because that'd be dumb
-			ClearOrder(MDToOrdertype(e.direction/(-1)), e.in_floor)
+		} else if e.isOrderInFloor(MDToOrdertype(e.direction*(-1)), e.in_floor) { //if we're only on an up-order, direction down, the doors shouldn't have to be open for 6 seconds, because that'd be dumb
+			ClearOrder(MDToOrdertype(e.direction*(-1)), e.in_floor)
 		}
 
 		if e.isOrderInFloor(OrderType(2+e.ID), e.in_floor) {
@@ -72,37 +72,16 @@ func (e *Elevator) elev_open_door() {
 
 		if !GetObstruction() { //last check before exiting door-open state
 			simreq := makeSimReq(OrderType(2 + e.ID))
-			dir, _ := chooseDirection(*e, simreq, OrderType(2+e.ID), 10) //hva skal duration være?
-			if dir != MD_Stop {
+			dir, _ := chooseDirection(*e, simreq, CAB_FIRST+OrderType(e.ID), 10) //hva skal duration være?
+			if !(dir == MD_Stop) {
 				SetDoorOpenLamp(false)
 				e.direction = dir
 				e.state = ELEV_RUNNING
+				return
 			} else {
 				e.state = ELEV_IDLE
+				return
 			}
-			/*			if e.enter_idle() {
-							e.state = ELEV_IDLE
-						} else {
-							SetDoorOpenLamp(false)
-							e.state = ELEV_RUNNING
-						}
-						/*if e.direction == MD_Up {
-							fmt.Printf("going up!\n")
-							if e.ordersAbove() {
-								fmt.Printf("there were orders above!\n")
-								e.state = ELEV_RUNNING
-								SetDoorOpenLamp(false)
-								return
-							}
-						} else if e.direction == MD_Down {
-							fmt.Printf("going down\n")
-							if e.ordersBelow() {
-								fmt.Printf("there were orders below!\n")
-								e.state = ELEV_RUNNING
-								SetDoorOpenLamp(false)
-								return
-							}
-						}*/
 		}
 	}
 }
@@ -135,33 +114,19 @@ func makeSimReq(ourCab OrderType) map[OrderType][]bool {
 
 func (e *Elevator) elev_idle() {
 	simreq := makeSimReq(OrderType(2 + e.ID))
-	/*if e.direction == MD_Up {
-		if requestsAbove(*e, simreq, OrderType(2+e.ID)) && !GetObstruction() {
-			e.direction = MD_Up
-			e.state = ELEV_RUNNING
-			SetDoorOpenLamp(false)
-			return
-		}
-	} else if e.direction == MD_Down {
-		if requestsBelow(*e, simreq, OrderType(2+e.ID)) && !GetObstruction() {
-			e.direction = MD_Down
-			e.state = ELEV_RUNNING
-			SetDoorOpenLamp(false)
-			return
-		}
-	}*/
-	dir, _ := chooseDirection(*e, simreq, OrderType(2+e.ID), 10) //hva skal duration være?
-	if dir != MD_Stop {
+	dir, _ := chooseDirection(*e, simreq, CAB_FIRST+OrderType(e.ID), 10) //hva skal duration være?
+	if !(dir == MD_Stop) && !GetObstruction() {
 		SetDoorOpenLamp(false)
 		e.direction = dir
 		e.state = ELEV_RUNNING
 		return
+	} else {
+		e.direction = e.direction * (-1)
+		if e.viable_floor(e.in_floor) && !GetObstruction() {
+			e.state = ELEV_DOOR_OPEN
+			e.doorOpenTime = time.Now()
+		}
 	}
-	/*if !e.enter_idle() && !GetObstruction() {
-		SetDoorOpenLamp(false)
-		e.state = ELEV_RUNNING
-		return
-	}*/
 	SetDoorOpenLamp(true)
 	SetMotorDirection(MD_Stop)
 }
@@ -178,6 +143,7 @@ func (e *Elevator) Elev_routine() {
 		case ELEV_RUNNING:
 			e.elev_run()
 		}
+		//TODO: get last failed order-time. if less than 1/2s ago, enetr boot-mode
 		time.Sleep(_pollRate)
 	}
 }
@@ -188,7 +154,7 @@ func (e *Elevator) viable_floor(floor int) bool {
 	} else {
 		return e.isOrderInFloor(OrderType(2+e.ID), floor) || e.isOrderInFloor(MDToOrdertype(e.direction), floor)
 	}*/
-	return e.isOrderInFloor(OrderType(2+e.ID), floor) || e.isOrderInFloor(MDToOrdertype(e.direction), floor) || e.isOrderInFloor(MDToOrdertype(e.direction/(-1)), floor)
+	return e.isOrderInFloor(OrderType(2+e.ID), floor) || e.isOrderInFloor(MDToOrdertype(e.direction), floor) //|| e.isOrderInFloor(MDToOrdertype(e.direction/(-1)), floor)
 }
 
 func (e *Elevator) stopRoutine() bool {
