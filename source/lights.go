@@ -22,7 +22,7 @@ func Light_routine(elevID int) {
 			for j := range 2 {
 				order_dir := ReadOrderData(OrderType(j), i)
 
-				if stateFromVersionNr(order_dir.version_nr) == ORDER_CONFIRMED {
+				if StateFromVersionNr(order_dir.Version) == ORDER_CONFIRMED {
 					SetButtonLamp(ButtonType(j), i, true)
 				} else {
 					SetButtonLamp(ButtonType(j), i, false)
@@ -32,7 +32,7 @@ func Light_routine(elevID int) {
 			//check cab button
 			ourCab := OrderType(2 + elevID)
 			order_cab := ReadOrderData(ourCab, i)
-			if stateFromVersionNr(order_cab.version_nr) == ORDER_CONFIRMED {
+			if StateFromVersionNr(order_cab.Version) == ORDER_CONFIRMED {
 				SetButtonLamp(BT_Cab, i, true)
 			} else {
 				SetButtonLamp(BT_Cab, i, false)

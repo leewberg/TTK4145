@@ -141,7 +141,7 @@ func (e *Elevator) stopRoutine() {
 
 func (e *Elevator) isOrderInFloor(dir OrderType, floor int) bool {
 	order := ReadOrderData(dir, floor)
-	return stateFromVersionNr(order.version_nr) == ORDER_CONFIRMED && order.assigned_to == e.ID && time.Now().UnixMilli()-order.assigned_at_time > BIDDING_TIME
+	return StateFromVersionNr(order.Version) == ORDER_CONFIRMED && order.AssignedID == e.ID && time.Now().UnixMilli()-order.AssignedAtTime > BIDDING_TIME
 }
 
 func (e *Elevator) enter_idle() bool {

@@ -6,13 +6,13 @@ import (
 	"time"
 )
 
-// Module to keep track of the last known functional times of all elevators
+// Module to keep track of liveliness of the elevators
 var lastProofOfWork []int64
 var lastFailedOrderTime []int64
-var lastRecivedMsgTime int64 // for figuring out if we are connected to a network. maybe isolate this
+var lastRecivedMsgTime int64 // for figuring out if we are isolated
 var mutexLFT sync.RWMutex
 
-func InitFunctionalTimes() {
+func InitPeers() {
 	mutexLFT.Lock()
 	defer mutexLFT.Unlock()
 
@@ -69,7 +69,6 @@ func recivedMsg() {
 }
 
 func isAloneOnNetwork() bool {
-	// includes stuck nodes
 	mutexLFT.RLock()
 	defer mutexLFT.RUnlock()
 	return time.Now().UnixMilli()-lastRecivedMsgTime > ELEVATOR_TIMEOUT

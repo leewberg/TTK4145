@@ -7,32 +7,14 @@ import (
 	"time"
 )
 
-// Order snapshot
-type OrderSnapshot struct {
-	Version     int   `json:"v"` // version_nr
-	Assigned_to int   `json:"a"` // assigned_to
-	Cost        int   `json:"c"` // assigned_cost
-	Time        int64 `json:"t"` // assigned_at_time
-}
-
-// Full world view snapshot
-type WorldView struct {
-	Sender      string            `json:"sender"`
-	ProofOfWork []int64           `json:"proofWork"`
-	LastFailed  []int64           `json:"lastFailed"`
-	Orders      [][]OrderSnapshot `json:"orders"`
-}
-
 func StartNetwork(myID int) {
-
-	const bcastPort = 16569 // TODO: put this into config
 
 	netID := fmt.Sprintf("elev-%d", myID)
 
 	outbox := make(chan WorldView, 16)
 	inbox := make(chan WorldView, 64)
-	go bcast.Transmitter(bcastPort, outbox)
-	go bcast.Receiver(bcastPort, inbox)
+	go bcast.Transmitter(BCAST_PORT, outbox)
+	go bcast.Receiver(BCAST_PORT, inbox)
 
 	go func() { // sender
 		t := time.NewTicker(BROADCAST_PERIOD * time.Millisecond)
@@ -44,7 +26,13 @@ func StartNetwork(myID int) {
 			if rand.IntN(2) == 0 { // simulates packet loss
 				continue
 			}
-			outbox <- getWorldSnapshot(netID)
+
+			select {
+
+			case outbox <- getWorldSnapshot(netID):
+			default:
+				fmt.Println("Warn: Network outbox full, dropping package")
+			}
 			// fmt.Println("State of the order", ReadOrderData(HALL_UP, 2))
 			// fmt.Println("elev 0 functional", getFunctionalElevators()[MY_ID])
 			// fmt.Println("elev 0 last work", getLastProofOfWork(MY_ID))
@@ -101,10 +89,10 @@ func snapshotOrdersFlat() [][]OrderSnapshot {
 		for f := 0; f < NUM_FLOORS; f++ {
 			od := ReadOrderData(OrderType(t), f)
 			out[t][f] = OrderSnapshot{
-				Version:     od.version_nr,
-				Assigned_to: od.assigned_to,
-				Cost:        od.assigned_cost,
-				Time:        od.assigned_at_time,
+				Version:     od.Version,
+				Assigned_to: od.AssignedID,
+				Cost:        od.AssignedCost,
+				Time:        od.AssignedAtTime,
 			}
 		}
 	}
@@ -129,10 +117,10 @@ func mergeNetWorld(in WorldView) {
 		for f := 0; f < NUM_FLOORS; f++ {
 			order := in.Orders[t][f]
 			MergeOrder(OrderType(t), f, OrderData{
-				version_nr:       order.Version,
-				assigned_to:      order.Assigned_to,
-				assigned_cost:    order.Cost,
-				assigned_at_time: order.Time,
+				Version:        order.Version,
+				AssignedID:     order.Assigned_to,
+				AssignedCost:   order.Cost,
+				AssignedAtTime: order.Time,
 			})
 		}
 	}

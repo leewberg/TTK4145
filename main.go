@@ -22,7 +22,6 @@ func main() {
 func runSupervisor() {
 	// restarts elevator uppon crash
 
-	// make sure the supervisor is not terminated
 	signal.Ignore(syscall.SIGTERM)
 	for {
 
@@ -35,7 +34,7 @@ func runSupervisor() {
 		cmd.Stderr = os.Stderr
 		cmd.Stdin = os.Stdin
 
-		// blocking until worker is killed
+		// blocking until worker terminates
 		err := cmd.Run()
 
 		fmt.Printf("[Supervisor] App crashed or stopped: %v\n", err)
@@ -58,7 +57,7 @@ func elevatorMain() {
 
 	elevio.Clear_all_lights()
 	elevio.InitOrderData()
-	elevio.InitFunctionalTimes()
+	elevio.InitPeers()
 	elevio.LocalElevator.Init(elevio.MY_ID)
 
 	time.Sleep(100 * time.Millisecond)

@@ -26,8 +26,8 @@ func costFunction(orderType OrderType, orderFloor int) int {
 		simRequests[orderType] = make([]bool, NUM_FLOORS)
 		for floor := range NUM_FLOORS {
 			orderData := ReadOrderData(orderType, floor)
-			if stateFromVersionNr(orderData.version_nr) == ORDER_CONFIRMED &&
-				orderData.assigned_to == MY_ID {
+			if StateFromVersionNr(orderData.Version) == ORDER_CONFIRMED &&
+				orderData.AssignedID == MY_ID {
 				simRequests[orderType][floor] = true
 			}
 		}
@@ -172,9 +172,9 @@ func assignOrders() {
 
 	// cab orders
 	for floor := range NUM_FLOORS {
-		order := ReadOrderData(CAB_FIRST+OrderType(MY_ID), floor)
-		if stateFromVersionNr(order.version_nr) == ORDER_REQUESTED {
-			AssignOrder(CAB_FIRST+OrderType(MY_ID), floor, 0)
+		order := ReadOrderData(GetMyCab(MY_ID), floor)
+		if StateFromVersionNr(order.Version) == ORDER_REQUESTED {
+			AssignOrder(GetMyCab(MY_ID), floor, 0)
 		}
 	}
 
@@ -184,13 +184,13 @@ func assignOrders() {
 
 			order := ReadOrderData(orderType, floor)
 
-			if stateFromVersionNr(order.version_nr) == ORDER_REQUESTED ||
-				(stateFromVersionNr(order.version_nr) == ORDER_CONFIRMED &&
-					time.Now().UnixMilli()-getLastProofOfWork(order.assigned_to) > ELEVATOR_TIMEOUT) {
+			if StateFromVersionNr(order.Version) == ORDER_REQUESTED ||
+				(StateFromVersionNr(order.Version) == ORDER_CONFIRMED &&
+					time.Now().UnixMilli()-getLastProofOfWork(order.AssignedID) > ELEVATOR_TIMEOUT) {
 
-				if stateFromVersionNr(order.version_nr) == ORDER_CONFIRMED {
-					orderFailed(order.assigned_to)
-					if order.assigned_to == MY_ID {
+				if StateFromVersionNr(order.Version) == ORDER_CONFIRMED {
+					orderFailed(order.AssignedID)
+					if order.AssignedID == MY_ID {
 						continue
 					}
 				}
@@ -198,12 +198,12 @@ func assignOrders() {
 				cost := costFunction(orderType, floor)
 				AssignOrder(orderType, floor, cost)
 
-			} else if stateFromVersionNr(order.version_nr) == ORDER_CONFIRMED &&
-				time.Now().UnixMilli()-order.assigned_at_time < BIDDING_TIME {
+			} else if StateFromVersionNr(order.Version) == ORDER_CONFIRMED &&
+				time.Now().UnixMilli()-order.AssignedAtTime < BIDDING_TIME {
 
 				cost := costFunction(orderType, floor)
 				// fmt.Println("Bidding with cost", cost, "on order", orderType, floor, "against", order.assigned_cost)
-				if cost+BIDDING_MIN_RAISE < order.assigned_cost {
+				if cost+BIDDING_MIN_RAISE < order.AssignedCost {
 					// fmt.Println("Got the bid with cost", cost, "on order", orderType, floor)
 					AssignOrder(orderType, floor, cost)
 				}
