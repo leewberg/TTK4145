@@ -80,29 +80,29 @@ func (e *Elevator) elev_open_door() {
 			} else {
 				e.state = ELEV_IDLE
 			}
-			if e.enter_idle() {
-				e.state = ELEV_IDLE
-			} else {
-				SetDoorOpenLamp(false)
-				e.state = ELEV_RUNNING
-			}
-			/*if e.direction == MD_Up {
-				fmt.Printf("going up!\n")
-				if e.ordersAbove() {
-					fmt.Printf("there were orders above!\n")
-					e.state = ELEV_RUNNING
-					SetDoorOpenLamp(false)
-					return
-				}
-			} else if e.direction == MD_Down {
-				fmt.Printf("going down\n")
-				if e.ordersBelow() {
-					fmt.Printf("there were orders below!\n")
-					e.state = ELEV_RUNNING
-					SetDoorOpenLamp(false)
-					return
-				}
-			}*/
+			/*			if e.enter_idle() {
+							e.state = ELEV_IDLE
+						} else {
+							SetDoorOpenLamp(false)
+							e.state = ELEV_RUNNING
+						}
+						/*if e.direction == MD_Up {
+							fmt.Printf("going up!\n")
+							if e.ordersAbove() {
+								fmt.Printf("there were orders above!\n")
+								e.state = ELEV_RUNNING
+								SetDoorOpenLamp(false)
+								return
+							}
+						} else if e.direction == MD_Down {
+							fmt.Printf("going down\n")
+							if e.ordersBelow() {
+								fmt.Printf("there were orders below!\n")
+								e.state = ELEV_RUNNING
+								SetDoorOpenLamp(false)
+								return
+							}
+						}*/
 		}
 	}
 }
