@@ -8,35 +8,31 @@ import (
 )
 
 // Order snapshot
-type NetOrder struct {
-	V int   `json:"v"` // version_nr
-	A int   `json:"a"` // assigned_to
-	C int   `json:"c"` // assigned_cost
-	T int64 `json:"t"` // assigned_at_time
+type OrderSnapshot struct {
+	Version     int   `json:"v"` // version_nr
+	Assigned_to int   `json:"a"` // assigned_to
+	Cost        int   `json:"c"` // assigned_cost
+	Time        int64 `json:"t"` // assigned_at_time
 }
 
 // Full world view snapshot
 type WorldView struct {
-	Sender string `json:"sender"` // which elevetor that sends the message, ex "elev-0"
-
-	ProofOfWork []int64 `json:"proofWork"`
-	LastFailed  []int64 `json:"lastFailed"`
-
-	Orders [][]NetOrder `json:"o"`
+	Sender      string            `json:"sender"`
+	ProofOfWork []int64           `json:"proofWork"`
+	LastFailed  []int64           `json:"lastFailed"`
+	Orders      [][]OrderSnapshot `json:"orders"`
 }
 
 func StartNetwork(myID int) {
 
-	const bcastPort = 16569 // tall fra nettverksmodulen
+	const bcastPort = 16569 // TODO: put this into config
 
 	netID := fmt.Sprintf("elev-%d", myID)
 
-	txWorld := make(chan WorldView, 16)
-	rxWorld := make(chan WorldView, 64)
-	go bcast.Transmitter(bcastPort, txWorld)
-	go bcast.Receiver(bcastPort, rxWorld)
-
-	// implement with functionalElevatorManager
+	outbox := make(chan WorldView, 16)
+	inbox := make(chan WorldView, 64)
+	go bcast.Transmitter(bcastPort, outbox)
+	go bcast.Receiver(bcastPort, inbox)
 
 	go func() { // sender
 		t := time.NewTicker(BROADCAST_PERIOD * time.Millisecond)
@@ -45,11 +41,11 @@ func StartNetwork(myID int) {
 		for {
 			<-t.C
 			assignOrders()
-			if rand.IntN(2) == 0 {
+			if rand.IntN(2) == 0 { // simulates packet loss
 				continue
 			}
-			txWorld <- buildNetWorld(netID)
-			// fmt.Println("State of the order", ReadOrderData(HALL_DOWN, 3))
+			outbox <- getWorldSnapshot(netID)
+			// fmt.Println("State of the order", ReadOrderData(HALL_UP, 2))
 			// fmt.Println("elev 0 functional", getFunctionalElevators()[MY_ID])
 			// fmt.Println("elev 0 last work", getLastProofOfWork(MY_ID))
 			// fmt.Println("elev 0 last fail", getLastFailedTime(MY_ID))
@@ -58,19 +54,19 @@ func StartNetwork(myID int) {
 
 	// merge snapshots
 	go func() {
-		for msg := range rxWorld {
+		for msg := range inbox {
 			if msg.Sender == netID {
 				continue
 			}
 
 			mergeNetWorld(msg)
 			recivedMsg()
-			fmt.Println("Got msg at time", time.Now())
+			// fmt.Println("Got msg at time", time.Now())
 		}
 	}()
 }
 
-func buildNetWorld(sender string) WorldView {
+func getWorldSnapshot(sender string) WorldView {
 	w := WorldView{
 		Sender:      sender,
 		LastFailed:  snapshotFailedTime(),
@@ -96,19 +92,19 @@ func snapshotProofOfWork() []int64 {
 	return out
 }
 
-func snapshotOrdersFlat() [][]NetOrder {
+func snapshotOrdersFlat() [][]OrderSnapshot {
 	types := NUM_ELEVATORS + 2
-	out := make([][]NetOrder, types)
+	out := make([][]OrderSnapshot, types)
 
 	for t := 0; t < types; t++ {
-		out[t] = make([]NetOrder, NUM_FLOORS)
+		out[t] = make([]OrderSnapshot, NUM_FLOORS)
 		for f := 0; f < NUM_FLOORS; f++ {
 			od := ReadOrderData(OrderType(t), f)
-			out[t][f] = NetOrder{
-				V: od.version_nr,
-				A: od.assigned_to,
-				C: od.assigned_cost,
-				T: od.assigned_at_time,
+			out[t][f] = OrderSnapshot{
+				Version:     od.version_nr,
+				Assigned_to: od.assigned_to,
+				Cost:        od.assigned_cost,
+				Time:        od.assigned_at_time,
 			}
 		}
 	}
@@ -131,12 +127,12 @@ func mergeNetWorld(in WorldView) {
 			continue
 		}
 		for f := 0; f < NUM_FLOORS; f++ {
-			no := in.Orders[t][f]
+			order := in.Orders[t][f]
 			MergeOrder(OrderType(t), f, OrderData{
-				version_nr:       no.V,
-				assigned_to:      no.A,
-				assigned_cost:    no.C,
-				assigned_at_time: no.T,
+				version_nr:       order.Version,
+				assigned_to:      order.Assigned_to,
+				assigned_cost:    order.Cost,
+				assigned_at_time: order.Time,
 			})
 		}
 	}

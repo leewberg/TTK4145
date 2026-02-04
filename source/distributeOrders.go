@@ -151,7 +151,7 @@ func chooseDirection(elevData Elevator, simRequests map[OrderType][]bool, ourCab
 		} else if anyRequestsAtFloor(elevData.in_floor, simRequests, ourCab) {
 			return MD_Stop, duration
 		} else if requestsBelow(elevData, simRequests, ourCab) {
-			return MD_Down, duration
+			return MD_Down, duration + 5000
 		} else {
 			return MD_Stop, duration
 		}
@@ -161,7 +161,7 @@ func chooseDirection(elevData Elevator, simRequests map[OrderType][]bool, ourCab
 		} else if anyRequestsAtFloor(elevData.in_floor, simRequests, ourCab) {
 			return MD_Stop, duration
 		} else if requestsAbove(elevData, simRequests, ourCab) {
-			return MD_Up, duration
+			return MD_Up, duration + 5000
 		} else {
 			return MD_Stop, duration
 		}
