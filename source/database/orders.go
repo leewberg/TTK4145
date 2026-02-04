@@ -65,10 +65,6 @@ func AssignOrder(dir t.OrderType, floor int, cost int) {
 		order.Cost = cost
 		order.AssignedID = cfg.MyID
 		order.AssignedTime = time.Now().UnixMilli()
-
-		if dir < t.CabFirst { // taking a hall order prooves im alive
-			Heartbeat()
-		}
 	}
 }
 

@@ -37,7 +37,7 @@ func processHallOrder(dir t.OrderType, floor int) {
 	now := time.Now().UnixMilli()
 
 	isNewRequest := state == t.Requested
-	hasFailed := state == t.Confirmed && now-db.LastSeen(order.AssignedID) > cfg.OrderTimeout
+	hasFailed := state == t.Confirmed && now-max(db.LastSeen(order.AssignedID), order.AssignedTime) > cfg.OrderTimeout
 	isBidWindow := state == t.Confirmed && now-order.AssignedTime < cfg.BiddingTime
 
 	if isNewRequest || hasFailed {
