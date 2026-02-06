@@ -35,7 +35,8 @@ func Light_routine(elevID int) {
 			//check cab button
 			ourCab := t.GetMyCab(cfg.MyID)
 			order_cab := db.GetOrder(ourCab, i)
-			if order_cab.GetState() == t.Confirmed {
+			if order_cab.GetState() == t.Confirmed &&
+				time.Now().UnixMilli()-order_cab.AssignedTime > cfg.PartitionTimeout {
 				SetButtonLamp(BT_Cab, i, true)
 			} else {
 				SetButtonLamp(BT_Cab, i, false)
