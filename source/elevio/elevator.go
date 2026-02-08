@@ -1,7 +1,6 @@
 package elevio
 
 import (
-	"fmt"
 	cfg "heislabb/source/config"
 	db "heislabb/source/database"
 	t "heislabb/source/types"
@@ -31,8 +30,6 @@ type Elevator struct {
 	Direction         MotorDirection //only up or down, never stop
 	Is_between_floors bool
 	doorOpenTime      time.Time
-	switched          bool
-	shouldStop        bool
 }
 
 var LocalElevator Elevator
@@ -41,8 +38,6 @@ func (e *Elevator) Init(ID int) {
 	e.State = ELEV_BOOT
 	e.ID = ID
 	e.doorOpenTime = time.Now()
-	e.switched = false
-	e.shouldStop = false
 
 	SetDoorOpenLamp(false)
 	SetStopLamp(false)
@@ -69,6 +64,8 @@ func (e *Elevator) elev_open_door() {
 
 		if e.isOrderInFloor(MDToOrdertype(e.Direction), e.In_floor) {
 			db.ClearOrder(MDToOrdertype(e.Direction), e.In_floor)
+		} else if e.isOrderInFloor(MDToOrdertype(e.Direction*(-1)), e.In_floor) {
+			db.ClearOrder(MDToOrdertype(e.Direction*(-1)), e.In_floor)
 		}
 
 		if e.isOrderInFloor(t.GetMyCab(cfg.MyID), e.In_floor) {
@@ -76,13 +73,17 @@ func (e *Elevator) elev_open_door() {
 		}
 
 		if !GetObstruction() { //last check before exiting door-open state
-			if e.enter_idle() {
-				e.State = ELEV_IDLE
-			} else {
+			simreq := makeSimReq(t.OrderType(2 + e.ID))
+			dir, _ := chooseDirection(*e, simreq, 10) //hva skal duration være?
+			if !(dir == MD_Stop) {
 				SetDoorOpenLamp(false)
+				e.Direction = dir
 				e.State = ELEV_RUNNING
+				return
+			} else {
+				e.State = ELEV_IDLE
+				return
 			}
-			SetDoorOpenLamp(false)
 		}
 	}
 }
@@ -93,19 +94,43 @@ func (e *Elevator) elev_run() {
 		e.State = ELEV_DOOR_OPEN
 		e.doorOpenTime = time.Now()
 	} else {
-		if e.shouldStop {
-			e.State = ELEV_IDLE
-		}
+		e.State = ELEV_IDLE
+
 	}
 }
 
-func (e *Elevator) elev_idle() {
-	SetMotorDirection(MD_Stop)
-	SetDoorOpenLamp(true)
-	if !e.enter_idle() && !GetObstruction() {
-		SetDoorOpenLamp(false)
-		e.State = ELEV_RUNNING
+func makeSimReq(ourCab t.OrderType) map[t.OrderType][]bool {
+	simRequests := make(map[t.OrderType][]bool)
+	for _, orderType := range []t.OrderType{t.HallUp, t.HallDown, ourCab} {
+		simRequests[orderType] = make([]bool, cfg.NumFloors)
+		for floor := range cfg.NumFloors {
+			orderData := db.GetOrder(orderType, floor)
+			if orderData.GetState() == t.Confirmed &&
+				t.OrderType(orderData.AssignedID) == ourCab { //need to make sure that switching to ourCab was viable desicion
+				simRequests[orderType][floor] = true
+			}
+		}
 	}
+	return simRequests
+}
+
+func (e *Elevator) elev_idle() {
+	simreq := makeSimReq(t.OrderType(2 + e.ID))
+	dir, _ := chooseDirection(*e, simreq, 10) //hva skal duration være?
+	if !(dir == MD_Stop) && !GetObstruction() {
+		SetDoorOpenLamp(false)
+		e.Direction = dir
+		e.State = ELEV_RUNNING
+		return
+	} else {
+		e.Direction = e.Direction * (-1)
+		if e.viable_floor(e.In_floor) && !GetObstruction() {
+			e.State = ELEV_DOOR_OPEN
+			e.doorOpenTime = time.Now()
+		}
+	}
+	SetDoorOpenLamp(true)
+	SetMotorDirection(MD_Stop)
 }
 
 func (e *Elevator) Elev_routine() {
@@ -120,98 +145,29 @@ func (e *Elevator) Elev_routine() {
 		case ELEV_RUNNING:
 			e.elev_run()
 		}
+		//TODO: get last failed order-time. if less than 1/2s ago, enetr boot-mode
 		time.Sleep(_pollRate)
 	}
 }
 
 func (e *Elevator) viable_floor(floor int) bool {
-	if e.switched {
-		return e.isOrderInFloor(t.GetMyCab(cfg.MyID), floor) || e.isOrderInFloor(MDToOrdertype(e.Direction/(-1)), floor)
-	} else {
-		return e.isOrderInFloor(t.GetMyCab(cfg.MyID), floor) || e.isOrderInFloor(MDToOrdertype(e.Direction), floor)
-	}
+
+	return e.isOrderInFloor(t.OrderType(2+e.ID), floor) || e.isOrderInFloor(MDToOrdertype(e.Direction), floor)
 }
 
-func (e *Elevator) stopRoutine() {
-	for {
-		for i := range cfg.NumFloors {
-			if !(e.isOrderInFloor(t.HallUp, i) || !(e.isOrderInFloor(t.HallDown, i) || !e.isOrderInFloor(t.GetMyCab(cfg.MyID), i))) {
-				e.shouldStop = true
-			}
-			e.shouldStop = false
+func (e *Elevator) stopRoutine() bool {
+	j := 0
+	for i := range cfg.NumFloors {
+		if !e.viable_floor(i) {
+			j++
 		}
-		time.Sleep(_pollRate)
 	}
+	return j == cfg.NumFloors
 }
 
 func (e *Elevator) isOrderInFloor(dir t.OrderType, floor int) bool {
 	order := db.GetOrder(dir, floor)
 	return order.GetState() == t.Confirmed && order.AssignedID == e.ID && time.Now().UnixMilli()-order.AssignedTime > cfg.BiddingTime
-}
-
-func (e *Elevator) enter_idle() bool {
-	//checks if the elevator should enter idle-mode
-
-	//needed to avoid elevator switching directions back and forth if both directions would yield to e.switched == true
-	if e.switched {
-		e.Direction = e.Direction / (-1)
-		e.switched = false
-	}
-
-	if e.check_turn() == NO_FIND {
-		if e.check_turn() != NO_FIND { //only run this twice if you didn't find an avaliable order in the first instance. if you run it twice you risk messing up the resulting directions
-			return false
-		}
-		return true
-	}
-	return false
-}
-
-func (e *Elevator) check_turn() exit_type {
-	switch e.Direction {
-	case MD_Up:
-		for i := e.In_floor; i < cfg.NumFloors; i++ {
-			if e.viable_floor(i) {
-				//if any of the floors above are viable
-				e.switched = false
-				e.Direction = MD_Up
-				return SAME_DIR_AV
-			}
-		}
-		for i := e.In_floor; i >= 0; i-- {
-			if e.viable_floor(i) {
-				//if any of the floors below are viable
-				e.Direction = MD_Down
-				e.switched = true
-				return DIFF_DIR_AV
-			}
-		}
-		e.switched = false
-		e.Direction = MD_Down
-		return NO_FIND
-	case MD_Down:
-		for i := e.In_floor; i >= 0; i-- {
-			if e.viable_floor(i) {
-				//if any of the floors below are viable
-				e.Direction = MD_Down
-				e.switched = false
-				return SAME_DIR_AV
-			}
-		}
-		for i := e.In_floor; i < cfg.NumFloors; i++ {
-			if e.viable_floor(i) {
-				//if any of the floors above are viable
-				e.Direction = MD_Up
-				e.switched = true
-				return DIFF_DIR_AV
-			}
-		}
-		e.Direction = MD_Up
-		e.switched = false
-		return NO_FIND
-	}
-	fmt.Printf("something went wrong, and we didn't register either up or down direction for elevator. \n")
-	return NO_FIND
 }
 
 func MDToOrdertype(dir MotorDirection) t.OrderType {
@@ -222,4 +178,52 @@ func MDToOrdertype(dir MotorDirection) t.OrderType {
 		return t.HallDown
 	}
 	return 0
+}
+
+func chooseDirection(elevData Elevator, simRequests map[t.OrderType][]bool, duration int) (MotorDirection, int) {
+	// check for orders in current direction of travel. if there are none, turn around
+	switch elevData.Direction {
+	case MD_Up:
+		if requestsAbove(elevData, simRequests) {
+			return MD_Up, duration
+		} else if anyRequestsAtFloor(elevData.In_floor, simRequests) {
+			return MD_Stop, duration
+		} else if requestsBelow(elevData, simRequests) {
+			return MD_Down, duration + 5000
+		} else {
+			return MD_Stop, duration
+		}
+	default:
+		if requestsBelow(elevData, simRequests) {
+			return MD_Down, duration
+		} else if anyRequestsAtFloor(elevData.In_floor, simRequests) {
+			return MD_Stop, duration
+		} else if requestsAbove(elevData, simRequests) {
+			return MD_Up, duration + 5000
+		} else {
+			return MD_Stop, duration
+		}
+	}
+}
+
+func requestsAbove(elevData Elevator, simRequests map[t.OrderType][]bool) bool {
+	for floor := elevData.In_floor + 1; floor < cfg.NumFloors; floor++ {
+		if anyRequestsAtFloor(floor, simRequests) {
+			return true
+		}
+	}
+	return false
+}
+
+func requestsBelow(elevData Elevator, simRequests map[t.OrderType][]bool) bool {
+	for floor := elevData.In_floor - 1; floor >= 0; floor-- {
+		if anyRequestsAtFloor(floor, simRequests) {
+			return true
+		}
+	}
+	return false
+}
+
+func anyRequestsAtFloor(floor int, simRequests map[t.OrderType][]bool) bool {
+	return simRequests[t.HallDown][floor] || simRequests[t.GetMyCab(cfg.MyID)][floor] || simRequests[t.HallUp][floor]
 }

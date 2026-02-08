@@ -39,7 +39,7 @@ func costFunction(orderType t.OrderType, orderFloor int) int {
 	case elevio.ELEV_DOOR_OPEN:
 		duration -= cfg.DoorOpenTime / 2
 	default:
-		elevData.Direction, _ = chooseDirection(elevData, simRequests, duration)
+		elevData.Direction, _ = elevio.chooseDirection(elevData, simRequests, duration)
 	}
 	if elevData.Is_between_floors {
 		duration += cfg.TravelTime / 2
@@ -55,7 +55,7 @@ func costFunction(orderType t.OrderType, orderFloor int) int {
 			if !simRequests[orderType][orderFloor] {
 				return duration
 			}
-			elevData.Direction, _ = chooseDirection(elevData, simRequests, duration)
+			elevData.Direction, _ = elevio.chooseDirection(elevData, simRequests, duration)
 		}
 		elevData.In_floor += int(elevData.Direction)
 		duration += cfg.TravelTime
@@ -68,13 +68,13 @@ func simulatedClearRequests(elevData elevio.Elevator, simRequests map[t.OrderTyp
 	case elevio.MD_Up:
 		if simRequests[t.HallUp][elevData.In_floor] {
 			simRequests[t.HallUp][elevData.In_floor] = false
-		} else if !requestsAbove(elevData, simRequests) {
+		} else if !elevio.requestsAbove(elevData, simRequests) {
 			simRequests[t.HallDown][elevData.In_floor] = false
 		}
 	case elevio.MD_Down:
 		if simRequests[t.HallDown][elevData.In_floor] {
 			simRequests[t.HallDown][elevData.In_floor] = false
-		} else if !requestsBelow(elevData, simRequests) {
+		} else if !elevio.requestsBelow(elevData, simRequests) {
 			simRequests[t.HallUp][elevData.In_floor] = false
 		}
 	default: // MD_Stop
@@ -83,35 +83,13 @@ func simulatedClearRequests(elevData elevio.Elevator, simRequests map[t.OrderTyp
 	}
 }
 
-func requestsAbove(elevData elevio.Elevator, simRequests map[t.OrderType][]bool) bool {
-	for floor := elevData.In_floor + 1; floor < cfg.NumFloors; floor++ {
-		if anyRequestsAtFloor(floor, simRequests) {
-			return true
-		}
-	}
-	return false
-}
-
-func requestsBelow(elevData elevio.Elevator, simRequests map[t.OrderType][]bool) bool {
-	for floor := elevData.In_floor - 1; floor >= 0; floor-- {
-		if anyRequestsAtFloor(floor, simRequests) {
-			return true
-		}
-	}
-	return false
-}
-
 func anyRequests(simRequests map[t.OrderType][]bool) bool {
 	for floor := range cfg.NumFloors {
-		if anyRequestsAtFloor(floor, simRequests) {
+		if elevio.anyRequestsAtFloor(floor, simRequests) {
 			return true
 		}
 	}
 	return false
-}
-
-func anyRequestsAtFloor(floor int, simRequests map[t.OrderType][]bool) bool {
-	return simRequests[t.HallDown][floor] || simRequests[t.GetMyCab(cfg.MyID)][floor] || simRequests[t.HallUp][floor]
 }
 
 func elevShouldStop(elevData elevio.Elevator, simRequests map[t.OrderType][]bool) (shouldStop bool) {
@@ -123,41 +101,15 @@ func elevShouldStop(elevData elevio.Elevator, simRequests map[t.OrderType][]bool
 	case elevio.MD_Up:
 		return (simRequests[t.HallUp][elevData.In_floor] ||
 			simRequests[ourCab][elevData.In_floor] ||
-			!requestsAbove(elevData, simRequests) ||
+			!elevio.requestsAbove(elevData, simRequests) ||
 			elevData.In_floor >= cfg.NumFloors-1)
 	case elevio.MD_Down:
 		return (simRequests[t.HallDown][elevData.In_floor] ||
 			simRequests[ourCab][elevData.In_floor] ||
-			!requestsBelow(elevData, simRequests) ||
+			!elevio.requestsBelow(elevData, simRequests) ||
 			elevData.In_floor == 0)
 	default: // case MD_Stop
 		return true
 	}
 
-}
-
-func chooseDirection(elevData elevio.Elevator, simRequests map[t.OrderType][]bool, duration int) (elevio.MotorDirection, int) {
-	// check for orders in current direction of travel. if there are none, turn around
-	switch elevData.Direction {
-	case elevio.MD_Up:
-		if requestsAbove(elevData, simRequests) {
-			return elevio.MD_Up, duration
-		} else if anyRequestsAtFloor(elevData.In_floor, simRequests) {
-			return elevio.MD_Stop, duration
-		} else if requestsBelow(elevData, simRequests) {
-			return elevio.MD_Down, duration + 5000
-		} else {
-			return elevio.MD_Stop, duration
-		}
-	default:
-		if requestsBelow(elevData, simRequests) {
-			return elevio.MD_Down, duration
-		} else if anyRequestsAtFloor(elevData.In_floor, simRequests) {
-			return elevio.MD_Stop, duration
-		} else if requestsAbove(elevData, simRequests) {
-			return elevio.MD_Up, duration + 5000
-		} else {
-			return elevio.MD_Stop, duration
-		}
-	}
 }
