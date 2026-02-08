@@ -39,7 +39,7 @@ func costFunction(orderType t.OrderType, orderFloor int) int {
 	case elevio.ELEV_DOOR_OPEN:
 		duration -= cfg.DoorOpenTime / 2
 	default:
-		elevData.Direction, _ = elevio.chooseDirection(elevData, simRequests, duration)
+		elevData.Direction, _ = elevio.ChooseDirection(elevData, simRequests, duration)
 	}
 	if elevData.Is_between_floors {
 		duration += cfg.TravelTime / 2
@@ -55,7 +55,7 @@ func costFunction(orderType t.OrderType, orderFloor int) int {
 			if !simRequests[orderType][orderFloor] {
 				return duration
 			}
-			elevData.Direction, _ = elevio.chooseDirection(elevData, simRequests, duration)
+			elevData.Direction, _ = elevio.ChooseDirection(elevData, simRequests, duration)
 		}
 		elevData.In_floor += int(elevData.Direction)
 		duration += cfg.TravelTime
@@ -68,13 +68,13 @@ func simulatedClearRequests(elevData elevio.Elevator, simRequests map[t.OrderTyp
 	case elevio.MD_Up:
 		if simRequests[t.HallUp][elevData.In_floor] {
 			simRequests[t.HallUp][elevData.In_floor] = false
-		} else if !elevio.requestsAbove(elevData, simRequests) {
+		} else if !elevio.RequestsAbove(elevData, simRequests) {
 			simRequests[t.HallDown][elevData.In_floor] = false
 		}
 	case elevio.MD_Down:
 		if simRequests[t.HallDown][elevData.In_floor] {
 			simRequests[t.HallDown][elevData.In_floor] = false
-		} else if !elevio.requestsBelow(elevData, simRequests) {
+		} else if !elevio.RequestsBelow(elevData, simRequests) {
 			simRequests[t.HallUp][elevData.In_floor] = false
 		}
 	default: // MD_Stop
@@ -85,7 +85,7 @@ func simulatedClearRequests(elevData elevio.Elevator, simRequests map[t.OrderTyp
 
 func anyRequests(simRequests map[t.OrderType][]bool) bool {
 	for floor := range cfg.NumFloors {
-		if elevio.anyRequestsAtFloor(floor, simRequests) {
+		if elevio.AnyRequestsAtFloor(floor, simRequests) {
 			return true
 		}
 	}
@@ -101,12 +101,12 @@ func elevShouldStop(elevData elevio.Elevator, simRequests map[t.OrderType][]bool
 	case elevio.MD_Up:
 		return (simRequests[t.HallUp][elevData.In_floor] ||
 			simRequests[ourCab][elevData.In_floor] ||
-			!elevio.requestsAbove(elevData, simRequests) ||
+			!elevio.RequestsAbove(elevData, simRequests) ||
 			elevData.In_floor >= cfg.NumFloors-1)
 	case elevio.MD_Down:
 		return (simRequests[t.HallDown][elevData.In_floor] ||
 			simRequests[ourCab][elevData.In_floor] ||
-			!elevio.requestsBelow(elevData, simRequests) ||
+			!elevio.RequestsBelow(elevData, simRequests) ||
 			elevData.In_floor == 0)
 	default: // case MD_Stop
 		return true
