@@ -106,7 +106,7 @@ func makeSimReq(ourCab t.OrderType) map[t.OrderType][]bool {
 		for floor := range cfg.NumFloors {
 			orderData := db.GetOrder(orderType, floor)
 			if orderData.GetState() == t.Confirmed &&
-				t.OrderType(orderData.AssignedID) == ourCab { //need to make sure that switching to ourCab was viable desicion
+				t.OrderType(orderData.AssignedID+int(t.CabFirst)) == ourCab { //need to make sure that switching to ourCab was viable desicion
 				simRequests[orderType][floor] = true
 			}
 		}
