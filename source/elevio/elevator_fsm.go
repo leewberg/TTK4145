@@ -46,7 +46,6 @@ func (e *Elevator) Elev_routine() {
 		case ELEV_RUNNING:
 			e.Run()
 		}
-		//TODO: get last failed order-time. if less than 1/2s ago, enetr boot-mode
 		time.Sleep(_pollRate)
 	}
 }
@@ -60,7 +59,7 @@ func (e *Elevator) Init(ID int) {
 	SetStopLamp(false)
 
 	a := GetFloor()
-	if a != 0 {
+	if a == -1 {
 		SetMotorDirection(MD_Down)
 		return
 	}
@@ -70,8 +69,6 @@ func (e *Elevator) Init(ID int) {
 	SetStopLamp(false)
 
 	e.State = ELEV_IDLE
-
-	go e.stopRoutine()
 }
 
 func (e *Elevator) DoorOpen() {
@@ -91,7 +88,7 @@ func (e *Elevator) DoorOpen() {
 
 		if !GetObstruction() { //last check before exiting door-open state
 			simreq := makeSimReq(t.OrderType(2 + e.ID))
-			dir, _ := ChooseDirection(*e, simreq, 10) //hva skal duration være?
+			dir, _ := ChooseDirection(*e, simreq, 10)
 			if !(dir == MD_Stop) {
 				SetDoorOpenLamp(false)
 				e.Direction = dir
@@ -118,7 +115,7 @@ func (e *Elevator) Run() {
 
 func (e *Elevator) Idle() {
 	simreq := makeSimReq(t.OrderType(2 + e.ID))
-	dir, _ := ChooseDirection(*e, simreq, 10) //hva skal duration være?
+	dir, _ := ChooseDirection(*e, simreq, 10)
 	if !(dir == MD_Stop) && !GetObstruction() {
 		SetDoorOpenLamp(false)
 		e.Direction = dir
@@ -133,14 +130,4 @@ func (e *Elevator) Idle() {
 	}
 	SetDoorOpenLamp(true)
 	SetMotorDirection(MD_Stop)
-}
-
-func (e *Elevator) stopRoutine() bool {
-	j := 0
-	for i := range cfg.NumFloors {
-		if !e.viable_floor(i) {
-			j++
-		}
-	}
-	return j == cfg.NumFloors
 }

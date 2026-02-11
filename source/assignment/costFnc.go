@@ -83,15 +83,6 @@ func simulatedClearRequests(elevData elevio.Elevator, simRequests map[t.OrderTyp
 	}
 }
 
-func anyRequests(simRequests map[t.OrderType][]bool) bool {
-	for floor := range cfg.NumFloors {
-		if elevio.AnyRequestsAtFloor(floor, simRequests) {
-			return true
-		}
-	}
-	return false
-}
-
 func elevShouldStop(elevData elevio.Elevator, simRequests map[t.OrderType][]bool) (shouldStop bool) {
 	// An out of bounds check failed here at index 4. so in_floor likley got to high
 	shouldStop = false
