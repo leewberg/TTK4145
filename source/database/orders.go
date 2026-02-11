@@ -73,6 +73,9 @@ func ClearOrder(dir t.OrderType, floor int) {
 
 	if order.IsActive() && order.AssignedID == cfg.MyID {
 		order.Version++
+		order.AssignedID = -1
+		order.Cost = t.INF
+		order.AssignedTime = 0
 		Heartbeat()
 		if isPartitioned() {
 			order.Version = 0
