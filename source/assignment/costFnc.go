@@ -19,7 +19,7 @@ func costFunction(orderType t.OrderType, orderFloor int) int {
 		simRequests[orderType] = make([]bool, cfg.NumFloors)
 		for floor := range cfg.NumFloors {
 			orderData := db.GetOrder(orderType, floor)
-			if orderData.GetState() == t.Confirmed &&
+			if orderData.IsActive() &&
 				orderData.AssignedID == cfg.MyID {
 				simRequests[orderType][floor] = true
 			}

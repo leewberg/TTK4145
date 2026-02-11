@@ -19,7 +19,7 @@ func MDToOrdertype(dir MotorDirection) t.OrderType {
 
 func (e *Elevator) isOrderInFloor(dir t.OrderType, floor int) bool {
 	order := db.GetOrder(dir, floor)
-	return order.GetState() == t.Confirmed && order.AssignedID == e.ID && time.Now().UnixMilli()-order.AssignedTime > cfg.BiddingTime
+	return order.IsActive() && order.AssignedID == e.ID && time.Now().UnixMilli()-order.AssignedTime > cfg.BiddingTime
 }
 
 func (e *Elevator) viable_floor(floor int) bool {
@@ -81,7 +81,7 @@ func makeSimReq(ourCab t.OrderType) map[t.OrderType][]bool {
 		simRequests[orderType] = make([]bool, cfg.NumFloors)
 		for floor := range cfg.NumFloors {
 			orderData := db.GetOrder(orderType, floor)
-			if orderData.GetState() == t.Confirmed &&
+			if orderData.IsActive() &&
 				t.OrderType(orderData.AssignedID+int(t.CabFirst)) == ourCab {
 				simRequests[orderType][floor] = true
 			}

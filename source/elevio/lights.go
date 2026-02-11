@@ -24,24 +24,13 @@ func Light_routine(elevID int) {
 			//check hall buttons
 			for j := range 2 {
 				order_dir := db.GetOrder(t.OrderType(j), i)
+				SetButtonLamp(ButtonType(j), i, order_dir.IsActive())
 
-				if order_dir.GetState() == t.Confirmed {
-					SetButtonLamp(ButtonType(j), i, true)
-				} else {
-					SetButtonLamp(ButtonType(j), i, false)
-
-				}
 			}
 			//check cab button
 			ourCab := t.GetMyCab(cfg.MyID)
 			order_cab := db.GetOrder(ourCab, i)
-			if order_cab.GetState() == t.Confirmed &&
-				time.Now().UnixMilli()-order_cab.AssignedTime > cfg.PartitionTimeout {
-
-				SetButtonLamp(BT_Cab, i, true)
-			} else if order_cab.GetState() != t.Confirmed {
-				SetButtonLamp(BT_Cab, i, false)
-			}
+			SetButtonLamp(BT_Cab, i, order_cab.IsActive())
 		}
 		time.Sleep(100 * time.Millisecond)
 

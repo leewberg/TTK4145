@@ -46,7 +46,6 @@ func (e *Elevator) Elev_routine() {
 		case ELEV_RUNNING:
 			e.Run()
 		}
-		//TODO: get last failed order-time. if less than 1/2s ago, enetr boot-mode
 		time.Sleep(_pollRate)
 	}
 }

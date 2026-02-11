@@ -21,10 +21,10 @@ func ButtonRoutine(e *Elevator) {
 		case a := <-drv_buttons: //hall up, down, or ANY cab button is pressed
 			fmt.Printf("%+v\n", a)
 			if a.Button == BT_HallDown || a.Button == BT_HallUp {
-				db.RequestOrder(t.OrderType(a.Button), a.Floor)
+				db.ActivateOrder(t.OrderType(a.Button), a.Floor)
 
 			} else { // cab order: adjust to which panel we order from
-				db.RequestOrder(t.OrderType(a.Button)+t.OrderType(cfg.MyID), a.Floor)
+				db.ActivateOrder(t.OrderType(a.Button)+t.OrderType(cfg.MyID), a.Floor)
 
 			}
 
