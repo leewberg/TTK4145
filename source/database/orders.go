@@ -90,11 +90,10 @@ func MergeOrder(dir t.OrderType, floor int, incoming t.OrderData) {
 	if incoming.Version > current.Version {
 
 		// Stubbornness clause: you should not externally clear an order assigned to this node
-		isMyActiveOrder := current.IsActive() && current.AssignedID == cfg.MyID
+		isMyOrder := current.IsActive() && current.AssignedID == cfg.MyID
 		incomingHasClearedIt := !incoming.IsActive()
 
-		if isMyActiveOrder && incomingHasClearedIt {
-			// hijack priority
+		if isMyOrder && incomingHasClearedIt {
 			orders[dir][floor].Version = incoming.Version + 1
 
 		} else {
