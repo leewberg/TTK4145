@@ -43,6 +43,9 @@ func ActivateOrder(dir t.OrderType, floor int) {
 
 	if !order.IsActive() {
 		order.Version++
+		order.AssignedID = -1
+		order.Cost = t.INF
+		order.AssignedTime = 0
 	}
 }
 
@@ -73,9 +76,6 @@ func ClearOrder(dir t.OrderType, floor int) {
 
 	if order.IsActive() && order.AssignedID == cfg.MyID {
 		order.Version++
-		order.AssignedID = -1
-		order.Cost = t.INF
-		order.AssignedTime = 0
 		Heartbeat()
 		if isPartitioned() {
 			order.Version = 0
@@ -123,6 +123,6 @@ func resolveCost(o t.OrderData) int {
 	if !active[o.AssignedID] {
 		cost += t.INF
 	}
-	cost += o.AssignedID // use ID for tiebreaks. ensure ID < MIN_RAISE
+	cost += o.AssignedID // tiebreak
 	return cost
 }
