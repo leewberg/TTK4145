@@ -7,7 +7,6 @@ import (
 	db "heislabb/source/database"
 	"heislabb/source/network/bcast"
 	t "heislabb/source/types"
-	"math/rand/v2"
 	"time"
 )
 
@@ -27,9 +26,6 @@ func StartNetwork(myID int) {
 		for {
 			<-ticker.C
 			assigner.AssignOrders()
-			if rand.IntN(2) == 0 { // simulates packet loss
-				continue
-			}
 
 			select {
 			case outbox <- getWorldSnapshot(netID):
