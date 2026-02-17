@@ -23,10 +23,8 @@ func InitOrders() {
 		orders[dir] = make([]t.OrderData, cfg.NumFloors)
 		for floor := range cfg.NumFloors {
 			orders[dir][floor] = t.OrderData{Version: 0, AssignedID: -1, Cost: t.INF, AssignedTime: 0}
-
 		}
 	}
-
 }
 
 func GetOrder(dir t.OrderType, floor int) t.OrderData {
@@ -49,6 +47,7 @@ func ActivateOrder(dir t.OrderType, floor int) {
 	}
 }
 
+// Assign order to myself
 func AssignOrder(dir t.OrderType, floor int, cost int) {
 	ordersMutex.Lock()
 	defer ordersMutex.Unlock()
@@ -78,13 +77,14 @@ func ClearOrder(dir t.OrderType, floor int) {
 		order.Version++
 		Heartbeat()
 		if isPartitioned() {
+			// partitioned networks have lower priority: they can't take hall orders
 			order.Version = 0
 		}
 	}
 }
 
 // Consensus logic
-func MergeOrder(dir t.OrderType, floor int, incoming t.OrderData) {
+func MergeIncomingOrder(dir t.OrderType, floor int, incoming t.OrderData) {
 	ordersMutex.Lock()
 	defer ordersMutex.Unlock()
 
@@ -92,11 +92,11 @@ func MergeOrder(dir t.OrderType, floor int, incoming t.OrderData) {
 
 	if incoming.Version > current.Version {
 
-		// Stubbornness clause: you should not externally clear an order assigned to this node
-		isMyOrder := current.IsActive() && current.AssignedID == cfg.MyID
+		// Stubbornness clause: you should not externally clear my cab order
+		isMyCab := current.IsActive() && dir == t.GetMyCab(cfg.MyID)
 		incomingHasClearedIt := !incoming.IsActive()
 
-		if isMyOrder && incomingHasClearedIt {
+		if isMyCab && incomingHasClearedIt {
 			orders[dir][floor].Version = incoming.Version + 1
 
 		} else {
@@ -116,7 +116,6 @@ func MergeOrder(dir t.OrderType, floor int, incoming t.OrderData) {
 	}
 }
 
-// Helpers
 func resolveCost(o t.OrderData) int {
 	cost := o.Cost
 	active := ActiveElevators()

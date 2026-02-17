@@ -25,7 +25,7 @@ func StartNetwork(myID int) {
 
 		for {
 			<-ticker.C
-			assigner.AssignHallOrders()
+			assigner.AssignOrders()
 
 			select {
 			case outbox <- getWorldSnapshot(netID):
@@ -55,13 +55,13 @@ func StartNetwork(myID int) {
 func getWorldSnapshot(sender string) t.WorldView {
 	return t.WorldView{
 		Sender:   sender,
-		PeerFail: snapshotLastFailed(),
-		PeerSeen: snapshotLastSeen(),
+		PeerFail: snapshotPeerFail(),
+		PeerSeen: snapshotPeerSeen(),
 		Orders:   snapshotOrders(),
 	}
 }
 
-func snapshotLastFailed() []int64 {
+func snapshotPeerFail() []int64 {
 	out := make([]int64, cfg.NumElevators)
 	for id := range cfg.NumElevators {
 		out[id] = db.LastMiss(id)
@@ -69,7 +69,7 @@ func snapshotLastFailed() []int64 {
 	return out
 }
 
-func snapshotLastSeen() []int64 {
+func snapshotPeerSeen() []int64 {
 	out := make([]int64, cfg.NumElevators)
 	for id := range cfg.NumElevators {
 		out[id] = db.LastSeen(id)
@@ -107,7 +107,7 @@ func mergeIncomingWorld(in t.WorldView) {
 			continue
 		}
 		for floor := range cfg.NumFloors {
-			db.MergeOrder(t.OrderType(ot), floor, in.Orders[ot][floor])
+			db.MergeIncomingOrder(t.OrderType(ot), floor, in.Orders[ot][floor])
 		}
 	}
 }

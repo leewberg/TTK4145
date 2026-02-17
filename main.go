@@ -31,6 +31,7 @@ func runSupervisor() {
 		fmt.Println("[Supervisor] Starting application...")
 
 		// spin up the worker
+		// TODO: make this create a new terminal
 		cmd := exec.Command(os.Args[0], os.Args[1:]...)
 		cmd.Env = append(os.Environ(), "APP_MODE=worker")
 		cmd.Stdout = os.Stdout

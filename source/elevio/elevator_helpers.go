@@ -81,8 +81,7 @@ func makeSimReq(ourCab t.OrderType) map[t.OrderType][]bool {
 		simRequests[orderType] = make([]bool, cfg.NumFloors)
 		for floor := range cfg.NumFloors {
 			orderData := db.GetOrder(orderType, floor)
-			if orderData.IsActive() &&
-				t.OrderType(orderData.AssignedID+int(t.CabFirst)) == ourCab {
+			if orderData.IsActive() && orderData.AssignedID == cfg.MyID {
 				simRequests[orderType][floor] = true
 			}
 		}
