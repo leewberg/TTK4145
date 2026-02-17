@@ -8,27 +8,16 @@ import (
 )
 
 // import "fmt"
-func AssignOrders() {
-	assignCabOrders()
-	assignHallOrders()
-}
 
-func assignCabOrders() {
-	myCab := t.GetMyCab(cfg.MyID)
-	for floor := range cfg.NumFloors {
-		db.AssignOrder(myCab, floor, 0)
-	}
-}
-
-func assignHallOrders() {
+func AssignHallOrders() {
 	for _, dir := range []t.OrderType{t.HallUp, t.HallDown} {
 		for floor := range cfg.NumFloors {
-			processHallOrder(dir, floor)
+			assignHallOrder(dir, floor)
 		}
 	}
 }
 
-func processHallOrder(dir t.OrderType, floor int) {
+func assignHallOrder(dir t.OrderType, floor int) {
 	order := db.GetOrder(dir, floor)
 	now := time.Now().UnixMilli()
 
