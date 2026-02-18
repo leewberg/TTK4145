@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"os/signal"
 	"strconv"
-	"strings"
 	"syscall"
 	"time"
 )
@@ -27,27 +26,16 @@ func runSupervisor() {
 	// restarts elevator uppon crash
 
 	signal.Ignore(syscall.SIGTERM)
-	wd, err := os.Getwd()
-	if err != nil {
-		fmt.Println("Could not get working directory:", err)
-		return
-	}
-
 	for {
 
 		fmt.Println("[Supervisor] Starting application...")
 
 		// spin up the worker
-
-		args := strings.Join(os.Args[1:], " ")
-		// cmdString := fmt.Sprintf("APP_MODE=worker go run main.go %s || read -p 'Crashed. Press Enter to close...'", args)
-		cmdString := fmt.Sprintf("APP_MODE=worker %s", args)
-		cmd := exec.Command("gnome-terminal",
-			"--working-directory="+wd,
-			"--wait",
-			"--",
-			"bash", "-c", cmdString,
-		)
+		cmd := exec.Command(os.Args[0], os.Args[1:]...)
+		cmd.Env = append(os.Environ(), "APP_MODE=worker")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		cmd.Stdin = os.Stdin
 
 		// blocking until worker terminates
 		err := cmd.Run()

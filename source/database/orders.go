@@ -1,7 +1,6 @@
 package database
 
 import (
-	// "fmt"
 	cfg "heislabb/source/config"
 	t "heislabb/source/types"
 	"sync"
@@ -91,7 +90,7 @@ func MergeIncomingOrder(dir t.OrderType, floor int, incoming t.OrderData) {
 
 	if incoming.Version > current.Version {
 
-		// Stubbornness clause: you should not externally clear my cab order
+		// You should not externally clear my cab order
 		isMyCab := current.IsActive() && dir == t.GetMyCab(cfg.MyID)
 		incomingHasClearedIt := !incoming.IsActive()
 
