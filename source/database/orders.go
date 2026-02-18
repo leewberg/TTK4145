@@ -115,6 +115,10 @@ func MergeIncomingOrder(dir t.OrderType, floor int, incoming t.OrderData) {
 }
 
 func resolveCost(o t.OrderData) int {
+	if o.AssignedID == -1 {
+		return t.INF
+	}
+
 	cost := o.Cost
 	active := ActiveElevators()
 	if !active[o.AssignedID] {
