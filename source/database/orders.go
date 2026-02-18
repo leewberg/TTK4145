@@ -47,8 +47,7 @@ func ActivateOrder(dir t.OrderType, floor int) {
 	}
 }
 
-// Assign order to myself
-func AssignOrder(dir t.OrderType, floor int, cost int) {
+func AssignToMe(dir t.OrderType, floor int, cost int) {
 	ordersMutex.Lock()
 	defer ordersMutex.Unlock()
 

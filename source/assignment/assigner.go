@@ -18,7 +18,7 @@ func assignCabOrders() {
 	for floor := range cfg.NumFloors {
 		order := db.GetOrder(myCab, floor)
 		if order.AssignedID == -1 {
-			db.AssignOrder(myCab, floor, 0)
+			db.AssignToMe(myCab, floor, 0)
 		}
 	}
 }
@@ -46,11 +46,11 @@ func processHallOrder(dir t.OrderType, floor int) {
 				db.LogFailure(order.AssignedID)
 			}
 
-			db.AssignOrder(dir, floor, myCost)
+			db.AssignToMe(dir, floor, myCost)
 
 		} else if isBidWindow {
 			if myCost+cfg.BiddingMinRaise < order.Cost {
-				db.AssignOrder(dir, floor, myCost)
+				db.AssignToMe(dir, floor, myCost)
 			}
 		}
 	}
