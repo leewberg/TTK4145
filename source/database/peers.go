@@ -10,7 +10,6 @@ import (
 var (
 	lastSeen    []int64
 	lastFailure []int64
-	lastPacket  int64 // for figuring out if we are isolated
 	peerMutex   sync.RWMutex
 )
 
@@ -58,38 +57,15 @@ func MergePeerSnapshot(id int, remoteLastSeen int64, remoteLastFail int64) {
 	lastFailure[id] = max(lastFailure[id], remoteLastFail)
 }
 
-func ReceivedMsg() {
-	peerMutex.Lock()
-	defer peerMutex.Unlock()
-
-	lastPacket = time.Now().UnixMilli()
-}
-
-func isPartitioned() bool {
-	peerMutex.RLock()
-	defer peerMutex.RUnlock()
-	return time.Now().UnixMilli()-lastPacket > cfg.OrderTimeout
-}
-
-func ActiveElevators() []bool {
+func IsActive(id int) bool {
 	peerMutex.RLock()
 	defer peerMutex.RUnlock()
 
 	now := time.Now().UnixMilli()
-	activeElevs := make([]bool, cfg.NumElevators)
 
-	for id := range cfg.NumElevators {
-		// in case all nodes but one are dead, we need NUM_ELEVATORS-1 timeout cycles to ensure the one functional node has a chance to grab the order
+	// in case all nodes but one are dead, we need NUM_ELEVATORS-1 timeout cycles to ensure the one functional node has a chance to grab the order
+	isResponsive := lastFailure[id] < lastSeen[id]
+	failuresAreOld := (now - lastFailure[id]) > cfg.NumElevators*cfg.OrderTimeout
 
-		isResponsive := lastFailure[id] < lastSeen[id]
-		failuresAreOld := (now - lastFailure[id]) > cfg.NumElevators*cfg.OrderTimeout
-
-		if isResponsive || failuresAreOld {
-			activeElevs[id] = true
-		} else {
-			activeElevs[id] = false
-		}
-	}
-
-	return activeElevs
+	return isResponsive || failuresAreOld
 }

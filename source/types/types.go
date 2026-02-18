@@ -12,7 +12,7 @@ func GetMyCab(id int) OrderType {
 	return OrderType(id + int(CabFirst))
 }
 
-const INF = 2147483647 // 32 bit signed integer limit
+const INF = 999999
 
 type OrderData struct {
 	Version int `json:"v"`

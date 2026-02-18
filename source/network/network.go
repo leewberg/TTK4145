@@ -44,7 +44,6 @@ func StartNetwork(myID int) {
 			}
 
 			mergeIncomingWorld(msg)
-			db.ReceivedMsg()
 			// fmt.Println("Got msg at time", time.Now())
 		}
 	}()

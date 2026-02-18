@@ -40,9 +40,9 @@ func ActivateOrder(dir t.OrderType, floor int) {
 
 	if !order.IsActive() {
 		order.Version++
-		order.AssignedID = -1
 		order.Cost = t.INF
-		order.AssignedTime = 0
+		order.AssignedID = cfg.MyID
+		order.AssignedTime = time.Now().UnixMilli()
 	}
 }
 
@@ -51,8 +51,7 @@ func AssignToMe(dir t.OrderType, floor int, cost int) {
 	defer ordersMutex.Unlock()
 
 	// don't take hall orders if im dead
-	activePeers := ActiveElevators()
-	if dir < t.CabFirst && !activePeers[cfg.MyID] {
+	if dir < t.CabFirst && !IsActive(cfg.MyID) {
 		return
 	}
 
@@ -74,10 +73,6 @@ func ClearOrder(dir t.OrderType, floor int) {
 	if order.IsActive() && order.AssignedID == cfg.MyID {
 		order.Version++
 		Heartbeat()
-		if isPartitioned() {
-			// partitioned networks have lower priority: they can't take hall orders
-			order.Version = 0
-		}
 	}
 }
 
@@ -115,11 +110,7 @@ func MergeIncomingOrder(dir t.OrderType, floor int, incoming t.OrderData) {
 }
 
 func resolveCost(o t.OrderData) int {
-	if o.AssignedID == -1 {
-		return t.INF
-	}
-	active := ActiveElevators()
-	if !active[o.AssignedID] {
+	if !IsActive(o.AssignedID) {
 		return t.INF
 	}
 	return o.Cost + o.AssignedID // AssignedID for tiebreak
