@@ -106,31 +106,31 @@ func (e *Elevator) DoorOpen() {
 
 func (e *Elevator) Run() {
 	SetMotorDirection(e.Direction)
-	if e.viable_floor(e.In_floor) && !e.Is_between_floors {
-		e.State = ELEV_DOOR_OPEN
-		e.doorOpenTime = time.Now()
-	} else {
-		e.State = ELEV_IDLE
-
+	if !e.Is_between_floors {
+		if e.viable_floor(e.In_floor) {
+			e.State = ELEV_DOOR_OPEN
+			e.doorOpenTime = time.Now()
+		} else {
+			e.State = ELEV_IDLE
+		}
 	}
 }
 
 func (e *Elevator) Idle() {
+	SetDoorOpenLamp(false)
 	simreq := makeSimReq(t.OrderType(2 + e.ID))
 	dir, _ := ChooseDirection(*e, simreq, 10) //hva skal duration være?
-	if !(dir == MD_Stop) && !GetObstruction() {
-		SetDoorOpenLamp(false)
+	if !(dir == MD_Stop) {
 		e.Direction = dir
 		e.State = ELEV_RUNNING
 		return
 	} else {
 		e.Direction = e.Direction * (-1)
-		if e.viable_floor(e.In_floor) && !GetObstruction() {
+		if e.viable_floor(e.In_floor) {
 			e.State = ELEV_DOOR_OPEN
 			e.doorOpenTime = time.Now()
 		}
 	}
-	SetDoorOpenLamp(true)
 	SetMotorDirection(MD_Stop)
 }
 
