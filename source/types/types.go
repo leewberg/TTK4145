@@ -34,3 +34,13 @@ type WorldView struct {
 	PeerFail []int64       `json:"fail"`
 	Orders   [][]OrderData `json:"orders"`
 }
+
+type Elev_states int
+
+const (
+	ELEV_BOOT Elev_states = iota
+	ELEV_IDLE
+	ELEV_RUNNING
+	ELEV_DOOR_OPEN
+)
+

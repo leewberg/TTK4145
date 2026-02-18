@@ -34,9 +34,9 @@ func costFunction(orderType t.OrderType, orderFloor int) int {
 
 	// initial considerations
 	switch elevData.State {
-	case elevio.ELEV_BOOT:
+	case t.ELEV_BOOT:
 		return t.INF
-	case elevio.ELEV_DOOR_OPEN:
+	case t.ELEV_DOOR_OPEN:
 		duration -= cfg.DoorOpenTime / 2
 	default:
 		elevData.Direction, _ = elevio.ChooseDirection(elevData, simRequests, duration)

@@ -7,7 +7,6 @@ import (
 	"time"
 )
 
-type elev_states int
 type exit_type int
 
 const (
@@ -16,15 +15,8 @@ const (
 	NO_FIND
 )
 
-const (
-	ELEV_BOOT elev_states = iota
-	ELEV_IDLE
-	ELEV_RUNNING
-	ELEV_DOOR_OPEN
-)
-
 type Elevator struct {
-	State             elev_states
+	State             t.Elev_states
 	In_floor          int
 	ID                int
 	Direction         MotorDirection //only up or down, never stop
@@ -37,13 +29,13 @@ var LocalElevator Elevator
 func (e *Elevator) Elev_routine() {
 	for {
 		switch e.State {
-		case ELEV_BOOT:
+		case t.ELEV_BOOT:
 			e.Init(e.ID)
-		case ELEV_IDLE:
+		case t.ELEV_IDLE:
 			e.Idle()
-		case ELEV_DOOR_OPEN:
+		case t.ELEV_DOOR_OPEN:
 			e.DoorOpen()
-		case ELEV_RUNNING:
+		case t.ELEV_RUNNING:
 			e.Run()
 		}
 		time.Sleep(_pollRate)
@@ -51,7 +43,7 @@ func (e *Elevator) Elev_routine() {
 }
 
 func (e *Elevator) Init(ID int) {
-	e.State = ELEV_BOOT
+	e.State = t.ELEV_BOOT
 	e.ID = ID
 	e.doorOpenTime = time.Now()
 
@@ -68,7 +60,7 @@ func (e *Elevator) Init(ID int) {
 	SetDoorOpenLamp(false)
 	SetStopLamp(false)
 
-	e.State = ELEV_IDLE
+	e.State = t.ELEV_IDLE
 
 	go e.stopRoutine()
 }
@@ -94,10 +86,10 @@ func (e *Elevator) DoorOpen() {
 			if !(dir == MD_Stop) {
 				SetDoorOpenLamp(false)
 				e.Direction = dir
-				e.State = ELEV_RUNNING
+				e.State = t.ELEV_RUNNING
 				return
 			} else {
-				e.State = ELEV_IDLE
+				e.State = t.ELEV_IDLE
 				return
 			}
 		}
@@ -108,10 +100,10 @@ func (e *Elevator) Run() {
 	SetMotorDirection(e.Direction)
 	if !e.Is_between_floors {
 		if e.viable_floor(e.In_floor) {
-			e.State = ELEV_DOOR_OPEN
+			e.State = t.ELEV_DOOR_OPEN
 			e.doorOpenTime = time.Now()
 		} else {
-			e.State = ELEV_IDLE
+			e.State = t.ELEV_IDLE
 		}
 	}
 }
@@ -122,12 +114,12 @@ func (e *Elevator) Idle() {
 	dir, _ := ChooseDirection(*e, simreq, 10) //hva skal duration være?
 	if !(dir == MD_Stop) {
 		e.Direction = dir
-		e.State = ELEV_RUNNING
+		e.State = t.ELEV_RUNNING
 		return
 	} else {
 		e.Direction = e.Direction * (-1)
 		if e.viable_floor(e.In_floor) {
-			e.State = ELEV_DOOR_OPEN
+			e.State = t.ELEV_DOOR_OPEN
 			e.doorOpenTime = time.Now()
 		}
 	}
