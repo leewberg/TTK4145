@@ -7,18 +7,23 @@ import (
 	"time"
 )
 
-// import "fmt"
-func AssignOrders() {
-	assignCabOrders()
-	assignHallOrders()
+func AssignerRoutine() {
+	ticker := time.NewTicker(cfg.BroadcastPeriod * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		<-ticker.C
+		assignCabOrders()
+		assignHallOrders()
+	}
 }
 
 func assignCabOrders() {
+	// assigning cab orders is logically redundant, but it is cleaner than having to deal with AssignedID = -1 only for cab orders
 	myCab := t.GetMyCab(cfg.MyID)
 	for floor := range cfg.NumFloors {
 		order := db.GetOrder(myCab, floor)
-		if order.GetState() == t.Requested {
-			db.AssignOrder(myCab, floor, 0)
+		if order.AssignedID == -1 {
+			db.AssignToMe(myCab, floor, 0)
 		}
 	}
 }
@@ -26,32 +31,32 @@ func assignCabOrders() {
 func assignHallOrders() {
 	for _, dir := range []t.OrderType{t.HallUp, t.HallDown} {
 		for floor := range cfg.NumFloors {
-			processHallOrder(dir, floor)
+			assignHallOrder(dir, floor)
 		}
 	}
 }
 
-func processHallOrder(dir t.OrderType, floor int) {
+func assignHallOrder(dir t.OrderType, floor int) {
 	order := db.GetOrder(dir, floor)
-	state := order.GetState()
 	now := time.Now().UnixMilli()
 
-	isNewRequest := state == t.Requested
-	hasFailed := state == t.Confirmed && now-max(db.LastSeen(order.AssignedID), order.AssignedTime) > cfg.OrderTimeout
-	isBidWindow := state == t.Confirmed && now-order.AssignedTime < cfg.BiddingTime
-
-	if isNewRequest || hasFailed {
-		if hasFailed {
-			db.LogFailure(order.AssignedID)
-		}
-
+	if order.IsActive() {
+		isAssigned := order.AssignedID != -1
+		isBidWindow := now-order.AssignedTime < cfg.BiddingTime
+		hasFailed := isAssigned && now-max(db.LastSeen(order.AssignedID), order.AssignedTime) > cfg.OrderTimeout
 		myCost := costFunction(dir, floor)
-		db.AssignOrder(dir, floor, myCost)
 
-	} else if isBidWindow {
-		myCost := costFunction(dir, floor)
-		if myCost+cfg.BiddingMinRaise < order.Cost {
-			db.AssignOrder(dir, floor, myCost)
+		if !isAssigned || hasFailed {
+			if hasFailed {
+				db.LogFailure(order.AssignedID)
+			}
+
+			db.AssignToMe(dir, floor, myCost)
+
+		} else if isBidWindow {
+			if myCost+cfg.BiddingMinRaise < order.Cost {
+				db.AssignToMe(dir, floor, myCost)
+			}
 		}
 	}
 }

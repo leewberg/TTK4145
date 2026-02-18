@@ -1,7 +1,6 @@
 package database
 
 import (
-	// "fmt"
 	cfg "heislabb/source/config"
 	t "heislabb/source/types"
 	"sync"
@@ -23,10 +22,8 @@ func InitOrders() {
 		orders[dir] = make([]t.OrderData, cfg.NumFloors)
 		for floor := range cfg.NumFloors {
 			orders[dir][floor] = t.OrderData{Version: 0, AssignedID: -1, Cost: t.INF, AssignedTime: 0}
-
 		}
 	}
-
 }
 
 func GetOrder(dir t.OrderType, floor int) t.OrderData {
@@ -35,18 +32,21 @@ func GetOrder(dir t.OrderType, floor int) t.OrderData {
 	return orders[dir][floor]
 }
 
-func RequestOrder(dir t.OrderType, floor int) {
+func ActivateOrder(dir t.OrderType, floor int) {
 	ordersMutex.Lock()
 	defer ordersMutex.Unlock()
 
 	order := &orders[dir][floor]
 
-	if order.GetState() == t.Clear {
+	if !order.IsActive() {
 		order.Version++
+		order.AssignedID = -1
+		order.Cost = t.INF
+		order.AssignedTime = 0
 	}
 }
 
-func AssignOrder(dir t.OrderType, floor int, cost int) {
+func AssignToMe(dir t.OrderType, floor int, cost int) {
 	ordersMutex.Lock()
 	defer ordersMutex.Unlock()
 
@@ -58,10 +58,7 @@ func AssignOrder(dir t.OrderType, floor int, cost int) {
 
 	order := &orders[dir][floor]
 
-	if order.GetState() == t.Requested {
-		order.Version++ // by assigning the order, we confirm it
-	}
-	if order.GetState() == t.Confirmed {
+	if order.IsActive() {
 		order.Cost = cost
 		order.AssignedID = cfg.MyID
 		order.AssignedTime = time.Now().UnixMilli()
@@ -74,42 +71,38 @@ func ClearOrder(dir t.OrderType, floor int) {
 
 	order := &orders[dir][floor]
 
-	if order.GetState() == t.Confirmed && order.AssignedID == cfg.MyID {
+	if order.IsActive() && order.AssignedID == cfg.MyID {
 		order.Version++
 		Heartbeat()
 		if isPartitioned() {
+			// partitioned networks have lower priority: they can't take hall orders
 			order.Version = 0
 		}
 	}
 }
 
 // Consensus logic
-func MergeOrder(dir t.OrderType, floor int, incoming t.OrderData) {
+func MergeIncomingOrder(dir t.OrderType, floor int, incoming t.OrderData) {
 	ordersMutex.Lock()
 	defer ordersMutex.Unlock()
-
-	if !isValid(incoming) {
-		return
-	}
 
 	current := orders[dir][floor]
 
 	if incoming.Version > current.Version {
 
-		// Stubbornness clause: you should not externally clear an order assigned to this node
-		isMyActiveOrder := current.GetState() == t.Confirmed && current.AssignedID == cfg.MyID
-		incomingHasClearedIt := incoming.GetState() != t.Confirmed
+		// You should not externally clear my cab order
+		isMyCab := current.IsActive() && dir == t.GetMyCab(cfg.MyID)
+		incomingHasClearedIt := !incoming.IsActive()
 
-		if isMyActiveOrder && incomingHasClearedIt {
-			// hijack highest priority
-			orders[dir][floor].Version = incoming.Version + (2 - incoming.Version%3)
+		if isMyCab && incomingHasClearedIt {
+			orders[dir][floor].Version = incoming.Version + 1
 
 		} else {
 			orders[dir][floor] = incoming
 
 		}
 
-	} else if incoming.Version == current.Version && incoming.GetState() == t.Confirmed {
+	} else if incoming.Version == current.Version && incoming.IsActive() {
 
 		currentCost := resolveCost(current)
 		incomingCost := resolveCost(incoming)
@@ -121,21 +114,13 @@ func MergeOrder(dir t.OrderType, floor int, incoming t.OrderData) {
 	}
 }
 
-// Helpers
-func isValid(o t.OrderData) bool {
-	if o.GetState() == t.Confirmed &&
-		o.AssignedID == -1 {
-		return false
-	}
-	return true
-}
-
 func resolveCost(o t.OrderData) int {
-	cost := o.Cost
+	if o.AssignedID == -1 {
+		return t.INF
+	}
 	active := ActiveElevators()
 	if !active[o.AssignedID] {
-		cost += t.INF
+		return t.INF
 	}
-	cost += o.AssignedID // use ID for tiebreaks. ensure ID < MIN_RAISE
-	return cost
+	return o.Cost + o.AssignedID // AssignedID for tiebreak
 }
