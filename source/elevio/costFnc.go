@@ -67,13 +67,13 @@ func simulatedClearRequests(elevData elevator, simRequests map[t.OrderType][]boo
 	case MD_Up:
 		if simRequests[t.HallUp][elevData.In_floor] {
 			simRequests[t.HallUp][elevData.In_floor] = false
-		} else if !RequestsAbove(elevData, simRequests) {
+		} else if !requestsAbove(elevData, simRequests) {
 			simRequests[t.HallDown][elevData.In_floor] = false
 		}
 	case MD_Down:
 		if simRequests[t.HallDown][elevData.In_floor] {
 			simRequests[t.HallDown][elevData.In_floor] = false
-		} else if !RequestsBelow(elevData, simRequests) {
+		} else if !requestsBelow(elevData, simRequests) {
 			simRequests[t.HallUp][elevData.In_floor] = false
 		}
 	default: // MD_Stop
@@ -91,12 +91,12 @@ func elevShouldStop(elevData elevator, simRequests map[t.OrderType][]bool) (shou
 	case MD_Up:
 		return (simRequests[t.HallUp][elevData.In_floor] ||
 			simRequests[ourCab][elevData.In_floor] ||
-			!RequestsAbove(elevData, simRequests) ||
+			!requestsAbove(elevData, simRequests) ||
 			elevData.In_floor >= cfg.NumFloors-1)
 	case MD_Down:
 		return (simRequests[t.HallDown][elevData.In_floor] ||
 			simRequests[ourCab][elevData.In_floor] ||
-			!RequestsBelow(elevData, simRequests) ||
+			!requestsBelow(elevData, simRequests) ||
 			elevData.In_floor == 0)
 	default: // case MD_Stop
 		return true

@@ -4,7 +4,6 @@ import (
 	cfg "heislabb/source/config"
 	db "heislabb/source/database"
 	t "heislabb/source/types"
-	"time"
 )
 
 func MDToOrdertype(dir MotorDirection) t.OrderType {
@@ -17,35 +16,30 @@ func MDToOrdertype(dir MotorDirection) t.OrderType {
 	return 0
 }
 
-func (e *elevator) isOrderInFloor(dir t.OrderType, floor int) bool {
-	order := db.GetOrder(dir, floor)
-	return order.IsActive() && order.AssignedID == e.ID && time.Now().UnixMilli()-order.AssignedTime > cfg.BiddingTime
-}
-
-func (e *elevator) viable_floor(floor int) bool {
-
-	return e.isOrderInFloor(t.OrderType(2+e.ID), floor) || e.isOrderInFloor(MDToOrdertype(e.Direction), floor)
+func viableFloor(dir t.OrderType, floor int, simRequests map[t.OrderType][]bool) bool {
+	//potential to be merged with anyRequests. but personally, the distinction between checking all types of orders vs. checking only the direction you're going in is important enough to keep these as seperate functions. extra logic can be added in the fsm to account for the merging of these, but this would require way more logic to check for edge cases (is there a cab order but also a hall down order, but also we're going up etc etc), and would thus become unneccecary. adding exit-types is possible, but it also requires more rewriting and checking than what is present in the current system
+	return simRequests[t.GetMyCab(cfg.MyID)][floor] || simRequests[dir][floor]
 }
 
 func ChooseDirection(elevData elevator, simRequests map[t.OrderType][]bool, duration int) (MotorDirection, int) {
 	// check for orders in current direction of travel. if there are none, turn around
 	switch elevData.Direction {
 	case MD_Up:
-		if RequestsAbove(elevData, simRequests) {
+		if requestsAbove(elevData, simRequests) {
 			return MD_Up, duration
-		} else if AnyRequestsAtFloor(elevData.In_floor, simRequests) {
+		} else if anyRequestsAtFloor(elevData.In_floor, simRequests) {
 			return MD_Stop, duration
-		} else if RequestsBelow(elevData, simRequests) {
+		} else if requestsBelow(elevData, simRequests) {
 			return MD_Down, duration + 5000
 		} else {
 			return MD_Stop, duration
 		}
 	default:
-		if RequestsBelow(elevData, simRequests) {
+		if requestsBelow(elevData, simRequests) {
 			return MD_Down, duration
-		} else if AnyRequestsAtFloor(elevData.In_floor, simRequests) {
+		} else if anyRequestsAtFloor(elevData.In_floor, simRequests) {
 			return MD_Stop, duration
-		} else if RequestsAbove(elevData, simRequests) {
+		} else if requestsAbove(elevData, simRequests) {
 			return MD_Up, duration + 5000
 		} else {
 			return MD_Stop, duration
@@ -53,25 +47,25 @@ func ChooseDirection(elevData elevator, simRequests map[t.OrderType][]bool, dura
 	}
 }
 
-func RequestsAbove(elevData elevator, simRequests map[t.OrderType][]bool) bool {
+func requestsAbove(elevData elevator, simRequests map[t.OrderType][]bool) bool {
 	for floor := elevData.In_floor + 1; floor < cfg.NumFloors; floor++ {
-		if AnyRequestsAtFloor(floor, simRequests) {
+		if anyRequestsAtFloor(floor, simRequests) {
 			return true
 		}
 	}
 	return false
 }
 
-func RequestsBelow(elevData elevator, simRequests map[t.OrderType][]bool) bool {
+func requestsBelow(elevData elevator, simRequests map[t.OrderType][]bool) bool {
 	for floor := elevData.In_floor - 1; floor >= 0; floor-- {
-		if AnyRequestsAtFloor(floor, simRequests) {
+		if anyRequestsAtFloor(floor, simRequests) {
 			return true
 		}
 	}
 	return false
 }
 
-func AnyRequestsAtFloor(floor int, simRequests map[t.OrderType][]bool) bool {
+func anyRequestsAtFloor(floor int, simRequests map[t.OrderType][]bool) bool {
 	return simRequests[t.HallDown][floor] || simRequests[t.GetMyCab(cfg.MyID)][floor] || simRequests[t.HallUp][floor]
 }
 

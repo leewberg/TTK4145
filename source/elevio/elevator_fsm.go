@@ -67,14 +67,14 @@ func (e *elevator) DoorOpen() {
 	SetMotorDirection(MD_Stop)
 	SetDoorOpenLamp(true)
 	if time.Since(e.doorOpenTime) > cfg.DoorOpenTime*time.Millisecond { //doors have been open for 3+ seconds
-
-		if e.isOrderInFloor(MDToOrdertype(e.Direction), e.In_floor) {
+		simreq := makeSimReq(t.GetMyCab(cfg.MyID))
+		if simreq[MDToOrdertype(e.Direction)][e.In_floor] {
 			db.ClearOrder(MDToOrdertype(e.Direction), e.In_floor)
-		} else if e.isOrderInFloor(MDToOrdertype(e.Direction*(-1)), e.In_floor) {
+		} else if simreq[MDToOrdertype(e.Direction*(-1))][e.In_floor] {
 			db.ClearOrder(MDToOrdertype(e.Direction*(-1)), e.In_floor)
 		}
 
-		if e.isOrderInFloor(t.GetMyCab(cfg.MyID), e.In_floor) {
+		if simreq[t.GetMyCab(cfg.MyID)][e.In_floor] {
 			db.ClearOrder(t.GetMyCab(cfg.MyID), e.In_floor)
 		}
 
@@ -97,7 +97,8 @@ func (e *elevator) DoorOpen() {
 func (e *elevator) Run() {
 	SetMotorDirection(e.Direction)
 	if !e.Is_between_floors {
-		if e.viable_floor(e.In_floor) {
+		simreq := makeSimReq(t.GetMyCab(cfg.MyID))
+		if viableFloor(MDToOrdertype(e.Direction), e.In_floor, simreq) {
 			e.State = t.ELEV_DOOR_OPEN
 			e.doorOpenTime = time.Now()
 		} else {
@@ -117,7 +118,7 @@ func (e *elevator) Idle() {
 		return
 	} else {
 		e.Direction = e.Direction * (-1)
-		if e.viable_floor(e.In_floor) {
+		if viableFloor(MDToOrdertype(e.Direction), e.In_floor, simreq) {
 			e.State = t.ELEV_DOOR_OPEN
 			e.doorOpenTime = time.Now()
 		}
