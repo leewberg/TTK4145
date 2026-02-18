@@ -6,7 +6,7 @@ const (
 	NumElevators = 3
 	NumFloors    = 4
 
-	BroadcastPort = 16569
+	BroadcastPort = 16570
 
 	// all ms
 	OrderTimeout     = 7000
