@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	assigner "heislabb/source/assignment"
 	cfg "heislabb/source/config"
 	db "heislabb/source/database"
 	elevio "heislabb/source/elevio"
@@ -65,6 +66,7 @@ func elevatorMain() {
 
 	time.Sleep(100 * time.Millisecond)
 	network.StartNetwork(cfg.MyID)
+	go assigner.AssignerRoutine()
 	go elevio.Light_routine(cfg.MyID)
 	go elevio.ButtonRoutine(&elevio.LocalElevator)
 	go elevio.LocalElevator.Elev_routine()

@@ -25,7 +25,6 @@ func StartNetwork(myID int) {
 
 		for {
 			<-ticker.C
-			assigner.AssignOrders()
 
 			select {
 			case outbox <- getWorldSnapshot(netID):

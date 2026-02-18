@@ -7,9 +7,14 @@ import (
 	"time"
 )
 
-func AssignOrders() {
-	assignCabOrders()
-	assignHallOrders()
+func AssignerRoutine() {
+	ticker := time.NewTicker(cfg.BroadcastPeriod * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		<-ticker.C
+		assignCabOrders()
+		assignHallOrders()
+	}
 }
 
 func assignCabOrders() {
