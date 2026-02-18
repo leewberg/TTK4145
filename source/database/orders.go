@@ -118,12 +118,9 @@ func resolveCost(o t.OrderData) int {
 	if o.AssignedID == -1 {
 		return t.INF
 	}
-
-	cost := o.Cost
 	active := ActiveElevators()
 	if !active[o.AssignedID] {
-		cost += t.INF
+		return t.INF
 	}
-	cost += o.AssignedID // tiebreak
-	return cost
+	return o.Cost + o.AssignedID // AssignedID for tiebreak
 }
