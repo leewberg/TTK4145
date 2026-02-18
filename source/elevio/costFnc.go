@@ -48,7 +48,7 @@ func CostFunction(orderType t.OrderType, orderFloor int) int {
 	for {
 		if elevShouldStop(elevData, simRequests) {
 
-			// clears all orders for the floor. TODO: Punish turnarounds also duing clears
+			// clears all orders for the floor
 			simulatedClearRequests(elevData, simRequests)
 			duration += cfg.DoorOpenTime
 			if !simRequests[orderType][orderFloor] {

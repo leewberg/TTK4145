@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	assigner "heislabb/source/assignment"
 	cfg "heislabb/source/config"
 	db "heislabb/source/database"
 	elevio "heislabb/source/elevio"
@@ -31,7 +32,6 @@ func runSupervisor() {
 		fmt.Println("[Supervisor] Starting application...")
 
 		// spin up the worker
-		// TODO: make this create a new terminal
 		cmd := exec.Command(os.Args[0], os.Args[1:]...)
 		cmd.Env = append(os.Environ(), "APP_MODE=worker")
 		cmd.Stdout = os.Stdout
@@ -66,6 +66,7 @@ func elevatorMain() {
 
 	time.Sleep(100 * time.Millisecond)
 	network.StartNetwork(cfg.MyID)
+	go assigner.AssignerRoutine()
 	go elevio.Light_routine(cfg.MyID)
 	go elevio.ButtonRoutine(&elevio.LocalElevator)
 	go elevio.LocalElevator.Elev_routine()
