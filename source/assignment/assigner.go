@@ -26,12 +26,12 @@ func assignCabOrders() {
 func assignHallOrders() {
 	for _, dir := range []t.OrderType{t.HallUp, t.HallDown} {
 		for floor := range cfg.NumFloors {
-			processHallOrder(dir, floor)
+			processOrder(dir, floor)
 		}
 	}
 }
 
-func processHallOrder(dir t.OrderType, floor int) {
+func processOrder(dir t.OrderType, floor int) {
 	order := db.GetOrder(dir, floor)
 	now := time.Now().UnixMilli()
 
