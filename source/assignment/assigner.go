@@ -3,6 +3,7 @@ package assignment
 import (
 	cfg "heislabb/source/config"
 	db "heislabb/source/database"
+	elevio "heislabb/source/elevio"
 	t "heislabb/source/types"
 	"time"
 )
@@ -39,7 +40,7 @@ func processOrder(dir t.OrderType, floor int) {
 		isAssigned := order.AssignedID != -1
 		isBidWindow := now-order.AssignedTime < cfg.BiddingTime
 		hasFailed := isAssigned && now-max(db.LastSeen(order.AssignedID), order.AssignedTime) > cfg.OrderTimeout
-		myCost := costFunction(dir, floor)
+		myCost := elevio.CostFunction(dir, floor)
 
 		if !isAssigned || hasFailed {
 			if hasFailed {

@@ -2,7 +2,6 @@ package network
 
 import (
 	"fmt"
-	assigner "heislabb/source/assignment"
 	cfg "heislabb/source/config"
 	db "heislabb/source/database"
 	"heislabb/source/network/bcast"
@@ -25,7 +24,6 @@ func StartNetwork(myID int) {
 
 		for {
 			<-ticker.C
-			assigner.AssignOrders()
 
 			select {
 			case outbox <- getWorldSnapshot(netID):

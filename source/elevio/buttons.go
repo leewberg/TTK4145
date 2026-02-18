@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func ButtonRoutine(e *Elevator) {
+func ButtonRoutine(e *elevator) {
 	var drv_buttons = make(chan ButtonEvent)
 	var drv_floors = make(chan int)
 	var drv_obstr = make(chan bool)

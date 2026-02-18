@@ -17,17 +17,17 @@ func MDToOrdertype(dir MotorDirection) t.OrderType {
 	return 0
 }
 
-func (e *Elevator) isOrderInFloor(dir t.OrderType, floor int) bool {
+func (e *elevator) isOrderInFloor(dir t.OrderType, floor int) bool {
 	order := db.GetOrder(dir, floor)
 	return order.IsActive() && order.AssignedID == e.ID && time.Now().UnixMilli()-order.AssignedTime > cfg.BiddingTime
 }
 
-func (e *Elevator) viable_floor(floor int) bool {
+func (e *elevator) viable_floor(floor int) bool {
 
 	return e.isOrderInFloor(t.OrderType(2+e.ID), floor) || e.isOrderInFloor(MDToOrdertype(e.Direction), floor)
 }
 
-func ChooseDirection(elevData Elevator, simRequests map[t.OrderType][]bool, duration int) (MotorDirection, int) {
+func ChooseDirection(elevData elevator, simRequests map[t.OrderType][]bool, duration int) (MotorDirection, int) {
 	// check for orders in current direction of travel. if there are none, turn around
 	switch elevData.Direction {
 	case MD_Up:
@@ -53,7 +53,7 @@ func ChooseDirection(elevData Elevator, simRequests map[t.OrderType][]bool, dura
 	}
 }
 
-func RequestsAbove(elevData Elevator, simRequests map[t.OrderType][]bool) bool {
+func RequestsAbove(elevData elevator, simRequests map[t.OrderType][]bool) bool {
 	for floor := elevData.In_floor + 1; floor < cfg.NumFloors; floor++ {
 		if AnyRequestsAtFloor(floor, simRequests) {
 			return true
@@ -62,7 +62,7 @@ func RequestsAbove(elevData Elevator, simRequests map[t.OrderType][]bool) bool {
 	return false
 }
 
-func RequestsBelow(elevData Elevator, simRequests map[t.OrderType][]bool) bool {
+func RequestsBelow(elevData elevator, simRequests map[t.OrderType][]bool) bool {
 	for floor := elevData.In_floor - 1; floor >= 0; floor-- {
 		if AnyRequestsAtFloor(floor, simRequests) {
 			return true
