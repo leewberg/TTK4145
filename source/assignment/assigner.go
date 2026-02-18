@@ -8,30 +8,14 @@ import (
 )
 
 func AssignOrders() {
-	assignCabOrders()
-	assignHallOrders()
-}
-
-func assignCabOrders() {
-	// this is simpler than having to account for only hall-orders having a non -1 AssignedID
-	myCab := t.GetMyCab(cfg.MyID)
-	for floor := range cfg.NumFloors {
-		order := db.GetOrder(myCab, floor)
-		if order.AssignedID == -1 {
-			db.AssignOrder(myCab, floor, 0)
-		}
-	}
-}
-
-func assignHallOrders() {
-	for _, dir := range []t.OrderType{t.HallUp, t.HallDown} {
+	for _, dir := range []t.OrderType{t.HallUp, t.HallDown, t.OrderType(2 + cfg.MyID)} {
 		for floor := range cfg.NumFloors {
-			processHallOrder(dir, floor)
+			processOrder(dir, floor)
 		}
 	}
 }
 
-func processHallOrder(dir t.OrderType, floor int) {
+func processOrder(dir t.OrderType, floor int) {
 	order := db.GetOrder(dir, floor)
 	now := time.Now().UnixMilli()
 
