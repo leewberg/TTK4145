@@ -85,11 +85,11 @@ func MergeIncomingOrder(dir t.OrderType, floor int, incoming t.OrderData) {
 
 	if incoming.Version > current.Version {
 
-		// You should not externally clear my cab order
-		isMyCab := current.IsActive() && dir == t.GetMyCab(cfg.MyID)
+		// You should not externally clear my order (protects in certain network merging)
+		isMyOrder := current.IsActive() && current.AssignedID == cfg.MyID
 		incomingHasClearedIt := !incoming.IsActive()
 
-		if isMyCab && incomingHasClearedIt {
+		if isMyOrder && incomingHasClearedIt {
 			orders[dir][floor].Version = incoming.Version + 1
 
 		} else {
@@ -111,7 +111,7 @@ func MergeIncomingOrder(dir t.OrderType, floor int, incoming t.OrderData) {
 
 func resolveCost(o t.OrderData) int {
 	if !IsActive(o.AssignedID) {
-		return t.INF
+		return t.INF + o.AssignedID
 	}
-	return o.Cost + o.AssignedID // AssignedID for tiebreak
+	return o.Cost + o.AssignedID // AssignedID for tiebreaks guarantees consistency
 }

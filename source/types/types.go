@@ -12,7 +12,7 @@ func GetMyCab(id int) OrderType {
 	return OrderType(id + int(CabFirst))
 }
 
-const INF = 999999
+const INF = 999000
 
 type OrderData struct {
 	Version int `json:"v"`
