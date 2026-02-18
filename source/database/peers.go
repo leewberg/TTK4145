@@ -79,7 +79,7 @@ func ActiveElevators() []bool {
 	activeElevs := make([]bool, cfg.NumElevators)
 
 	for id := range cfg.NumElevators {
-		// in case all nodes but one are dead, we need NUM_ELEVATORS-1 cycles to ensure the one functional node has a chance to grab the order
+		// in case all nodes but one are dead, we need NUM_ELEVATORS-1 timeout cycles to ensure the one functional node has a chance to grab the order
 
 		isResponsive := lastFailure[id] < lastSeen[id]
 		failuresAreOld := (now - lastFailure[id]) > cfg.NumElevators*cfg.OrderTimeout

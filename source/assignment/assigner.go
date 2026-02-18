@@ -13,7 +13,7 @@ func AssignOrders() {
 }
 
 func assignCabOrders() {
-	// this is simpler than having to account for only hall-orders having a non -1 AssignedID
+	// assigning cab orders is logically redundant, but it is cleaner than having to deal with AssignedID = -1 only for cab orders
 	myCab := t.GetMyCab(cfg.MyID)
 	for floor := range cfg.NumFloors {
 		order := db.GetOrder(myCab, floor)
@@ -26,12 +26,12 @@ func assignCabOrders() {
 func assignHallOrders() {
 	for _, dir := range []t.OrderType{t.HallUp, t.HallDown} {
 		for floor := range cfg.NumFloors {
-			processOrder(dir, floor)
+			assignHallOrder(dir, floor)
 		}
 	}
 }
 
-func processOrder(dir t.OrderType, floor int) {
+func assignHallOrder(dir t.OrderType, floor int) {
 	order := db.GetOrder(dir, floor)
 	now := time.Now().UnixMilli()
 
