@@ -17,7 +17,7 @@ const INF = 999000
 type OrderData struct {
 	Version int `json:"v"`
 
-	// only relevant in confirmed state
+	// only relevant if active
 	AssignedID   int   `json:"a"`
 	Cost         int   `json:"c"`
 	AssignedTime int64 `json:"t"`

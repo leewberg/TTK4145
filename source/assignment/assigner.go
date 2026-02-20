@@ -29,18 +29,17 @@ func assignHallOrder(dir t.OrderType, floor int) {
 	now := time.Now().UnixMilli()
 
 	if order.IsActive() {
-		isBidWindow := now-order.AssignedTime < cfg.BiddingTime
-		hasTimedOut := now-max(db.LastSeen(order.AssignedID), order.AssignedTime) > cfg.OrderTimeout
 		myCost := costFunction(dir, floor)
+		isBidWindow := now-order.AssignedTime < cfg.BiddingTime
+		hasLowerbid := myCost+cfg.BiddingMinRaise < order.Cost
+		hasTimedOut := now-max(db.LastSeen(order.AssignedID), order.AssignedTime) > cfg.OrderTimeout
 
 		if hasTimedOut {
 			db.LogFailure(order.AssignedID)
 			db.AssignToMe(dir, floor, myCost)
 
-		} else if isBidWindow {
-			if myCost+cfg.BiddingMinRaise < order.Cost {
-				db.AssignToMe(dir, floor, myCost)
-			}
+		} else if isBidWindow && hasLowerbid {
+			db.AssignToMe(dir, floor, myCost)
 		}
 	}
 }

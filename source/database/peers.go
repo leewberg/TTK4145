@@ -57,7 +57,7 @@ func MergePeerSnapshot(id int, remoteLastSeen int64, remoteLastFail int64) {
 	lastFailure[id] = max(lastFailure[id], remoteLastFail)
 }
 
-func IsActive(id int) bool {
+func IsFunctional(id int) bool {
 	peerMutex.RLock()
 	defer peerMutex.RUnlock()
 
