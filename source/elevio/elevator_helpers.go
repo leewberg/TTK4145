@@ -1,6 +1,7 @@
 package elevio
 
 import (
+	"fmt"
 	cfg "heislabb/source/config"
 	db "heislabb/source/database"
 	t "heislabb/source/types"
@@ -16,9 +17,10 @@ func MDToOrdertype(dir MotorDirection) t.OrderType {
 	return 0
 }
 
-func viableFloor(dir t.OrderType, floor int, simRequests map[t.OrderType][]bool) bool {
-	//potential to be merged with anyRequests. but personally, the distinction between checking all types of orders vs. checking only the direction you're going in is important enough to keep these as seperate functions. extra logic can be added in the fsm to account for the merging of these, but this would require way more logic to check for edge cases (is there a cab order but also a hall down order, but also we're going up etc etc), and would thus become unneccecary. adding exit-types is possible, but it also requires more rewriting and checking than what is present in the current system
-	return simRequests[t.GetMyCab(cfg.MyID)][floor] || simRequests[dir][floor]
+func isOrder(dir t.OrderType, floor int, simRequests map[t.OrderType][]bool) bool {
+	simReq := makeSimReq(t.GetMyCab(cfg.MyID)) //will give the correct boolean values when simRequests are used for getting boolean values, but will remain false in all cases when simReq is used for return value in this function
+	fmt.Printf("%t\n\n\n", simReq)
+	return simRequests[dir][floor]
 }
 
 func ChooseDirection(elevData elevator, simRequests map[t.OrderType][]bool, duration int) (MotorDirection, int) {
@@ -66,7 +68,7 @@ func requestsBelow(elevData elevator, simRequests map[t.OrderType][]bool) bool {
 }
 
 func anyRequestsAtFloor(floor int, simRequests map[t.OrderType][]bool) bool {
-	return simRequests[t.HallDown][floor] || simRequests[t.GetMyCab(cfg.MyID)][floor] || simRequests[t.HallUp][floor]
+	return isOrder(t.HallDown, floor, simRequests) || isOrder(t.GetMyCab(cfg.MyID), floor, simRequests) || isOrder(t.HallUp, floor, simRequests)
 }
 
 func makeSimReq(ourCab t.OrderType) map[t.OrderType][]bool {

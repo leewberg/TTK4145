@@ -62,7 +62,7 @@ func elevatorMain() {
 	elevio.Clear_all_lights()
 	db.InitOrders()
 	db.InitPeers()
-	elevio.LocalElevator.Init(cfg.MyID)
+	elevio.LocalElevator.Init()
 
 	time.Sleep(100 * time.Millisecond)
 	network.StartNetwork(cfg.MyID)
