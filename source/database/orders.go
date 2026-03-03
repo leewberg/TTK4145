@@ -46,11 +46,10 @@ func ActivateOrder(dir t.OrderType, floor int) {
 	}
 }
 
-func AssignToMe(dir t.OrderType, floor int, cost int) {
+func ClaimOrder(dir t.OrderType, floor int, cost int) {
 	ordersMutex.Lock()
 	defer ordersMutex.Unlock()
 
-	// don't take orders if im dead
 	if !IsFunctional(cfg.MyID) {
 		return
 	}
@@ -85,11 +84,12 @@ func MergeIncomingOrder(dir t.OrderType, floor int, incoming t.OrderData) {
 
 	if incoming.Version > current.Version {
 
-		// You should not externally clear my order (protects in certain network merging cases)
 		isMyOrder := current.IsActive() && current.AssignedID == cfg.MyID
 		incomingHasClearedIt := !incoming.IsActive()
 
+		// Protects in certain network merging cases
 		if isMyOrder && incomingHasClearedIt {
+			// ignore and reclaim network priority
 			orders[dir][floor].Version = incoming.Version + 1
 
 		} else {
@@ -110,8 +110,9 @@ func MergeIncomingOrder(dir t.OrderType, floor int, incoming t.OrderData) {
 }
 
 func resolveCost(o t.OrderData) int {
+	// AssignedID for tiebreaks guarantees consistency
 	if !IsFunctional(o.AssignedID) {
 		return t.INF + o.AssignedID
 	}
-	return o.Cost + o.AssignedID // AssignedID for tiebreaks guarantees consistency
+	return o.Cost + o.AssignedID
 }

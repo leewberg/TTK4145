@@ -36,10 +36,10 @@ func assignHallOrder(dir t.OrderType, floor int) {
 
 		if hasTimedOut {
 			db.LogFailure(order.AssignedID)
-			db.AssignToMe(dir, floor, myCost)
+			db.ClaimOrder(dir, floor, myCost)
 
 		} else if isBidWindow && hasLowerbid {
-			db.AssignToMe(dir, floor, myCost)
+			db.ClaimOrder(dir, floor, myCost)
 		}
 	}
 }

@@ -63,8 +63,8 @@ func IsFunctional(id int) bool {
 
 	now := time.Now().UnixMilli()
 
-	// in case all nodes but one are dead, we need NUM_ELEVATORS-1 timeout cycles to ensure the one functional node has a chance to grab the order
 	isResponsive := lastFailure[id] < lastSeen[id]
+	// get a new chance after a while
 	failuresAreOld := (now - lastFailure[id]) > cfg.NumElevators*cfg.OrderTimeout
 
 	return isResponsive || failuresAreOld
