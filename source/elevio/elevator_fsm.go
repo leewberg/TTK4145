@@ -7,14 +7,6 @@ import (
 	"time"
 )
 
-type exit_type int
-
-const (
-	SAME_DIR_AV exit_type = iota
-	DIFF_DIR_AV
-	NO_FIND
-)
-
 type elevator struct {
 	state             t.Elev_states
 	in_floor          int
