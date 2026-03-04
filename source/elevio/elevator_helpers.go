@@ -1,13 +1,12 @@
 package elevio
 
 import (
-	"fmt"
 	cfg "heislabb/source/config"
 	db "heislabb/source/database"
 	t "heislabb/source/types"
 )
 
-func MDToOrdertype(dir MotorDirection) t.OrderType {
+func mdToOrdertype(dir MotorDirection) t.OrderType {
 	switch dir {
 	case MD_Up:
 		return t.HallUp
@@ -18,8 +17,6 @@ func MDToOrdertype(dir MotorDirection) t.OrderType {
 }
 
 func isOrder(dir t.OrderType, floor int, simRequests map[t.OrderType][]bool) bool {
-	simReq := makeSimReq(t.GetMyCab(cfg.MyID)) //will give the correct boolean values when simRequests are used for getting boolean values, but will remain false in all cases when simReq is used for return value in this function
-	fmt.Printf("%t\n\n\n", simReq)
 	return simRequests[dir][floor]
 }
 
