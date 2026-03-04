@@ -3,6 +3,7 @@ package assignment
 import (
 	cfg "heislabb/source/config"
 	db "heislabb/source/database"
+	elevio "heislabb/source/elevio"
 	t "heislabb/source/types"
 	"time"
 )

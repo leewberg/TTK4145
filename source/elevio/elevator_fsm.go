@@ -7,7 +7,6 @@ import (
 	"time"
 )
 
-type elev_states int
 type exit_type int
 
 const (
@@ -16,15 +15,8 @@ const (
 	NO_FIND
 )
 
-const (
-	ELEV_BOOT elev_states = iota
-	ELEV_IDLE
-	ELEV_RUNNING
-	ELEV_DOOR_OPEN
-)
-
-type Elevator struct {
-	State             elev_states
+type elevator struct {
+	State             t.Elev_states
 	In_floor          int
 	ID                int
 	Direction         MotorDirection //only up or down, never stop
@@ -32,27 +24,27 @@ type Elevator struct {
 	doorOpenTime      time.Time
 }
 
-var LocalElevator Elevator
+var LocalElevator elevator
 
-func (e *Elevator) Elev_routine() {
+func (e *elevator) Elev_routine() {
 	for {
 		switch e.State {
-		case ELEV_BOOT:
-			e.Init(e.ID)
-		case ELEV_IDLE:
+		case t.ELEV_BOOT:
+			e.Init()
+		case t.ELEV_IDLE:
 			e.Idle()
-		case ELEV_DOOR_OPEN:
+		case t.ELEV_DOOR_OPEN:
 			e.DoorOpen()
-		case ELEV_RUNNING:
+		case t.ELEV_RUNNING:
 			e.Run()
 		}
 		time.Sleep(_pollRate)
 	}
 }
 
-func (e *Elevator) Init(ID int) {
-	e.State = ELEV_BOOT
-	e.ID = ID
+func (e *elevator) Init() {
+	e.State = t.ELEV_BOOT
+	e.ID = cfg.MyID //not really needed?
 	e.doorOpenTime = time.Now()
 
 	SetDoorOpenLamp(false)
@@ -68,66 +60,68 @@ func (e *Elevator) Init(ID int) {
 	SetDoorOpenLamp(false)
 	SetStopLamp(false)
 
-	e.State = ELEV_IDLE
+	e.State = t.ELEV_IDLE
 }
 
-func (e *Elevator) DoorOpen() {
+func (e *elevator) DoorOpen() {
 	SetMotorDirection(MD_Stop)
 	SetDoorOpenLamp(true)
 	if time.Since(e.doorOpenTime) > cfg.DoorOpenTime*time.Millisecond { //doors have been open for 3+ seconds
-
-		if e.isOrderInFloor(MDToOrdertype(e.Direction), e.In_floor) {
-			db.ClearOrder(MDToOrdertype(e.Direction), e.In_floor)
-		} else if e.isOrderInFloor(MDToOrdertype(e.Direction*(-1)), e.In_floor) {
-			db.ClearOrder(MDToOrdertype(e.Direction*(-1)), e.In_floor)
+		simreq := makeSimReq(t.GetMyCab(cfg.MyID))
+		if isOrder(mdToOrdertype(e.Direction), e.In_floor, simreq) {
+			db.ClearOrder(mdToOrdertype(e.Direction), e.In_floor)
+		} else if isOrder(mdToOrdertype(e.Direction*(-1)), e.In_floor, simreq) {
+			db.ClearOrder(mdToOrdertype(e.Direction*(-1)), e.In_floor)
 		}
 
-		if e.isOrderInFloor(t.GetMyCab(cfg.MyID), e.In_floor) {
+		if isOrder(t.GetMyCab(cfg.MyID), e.In_floor, simreq) {
 			db.ClearOrder(t.GetMyCab(cfg.MyID), e.In_floor)
 		}
 
 		if !GetObstruction() { //last check before exiting door-open state
-			simreq := makeSimReq(t.OrderType(2 + e.ID))
+			//			simreq := makeSimReq(t.OrderType(2 + e.ID))
 			dir, _ := ChooseDirection(*e, simreq, 10)
 			if !(dir == MD_Stop) {
 				SetDoorOpenLamp(false)
 				e.Direction = dir
-				e.State = ELEV_RUNNING
+				e.State = t.ELEV_RUNNING
 				return
 			} else {
-				e.State = ELEV_IDLE
+				e.State = t.ELEV_IDLE
 				return
 			}
 		}
 	}
 }
 
-func (e *Elevator) Run() {
+func (e *elevator) Run() {
 	SetMotorDirection(e.Direction)
-	if e.viable_floor(e.In_floor) && !e.Is_between_floors {
-		e.State = ELEV_DOOR_OPEN
-		e.doorOpenTime = time.Now()
-	} else {
-		e.State = ELEV_IDLE
-
+	if !e.Is_between_floors {
+		simreq := makeSimReq(t.GetMyCab(cfg.MyID))
+		if isOrder(mdToOrdertype(e.Direction), e.In_floor, simreq) || isOrder(t.OrderType(e.ID), e.In_floor, simreq) {
+			e.State = t.ELEV_DOOR_OPEN
+			e.doorOpenTime = time.Now()
+		} else {
+			e.State = t.ELEV_IDLE
+		}
 	}
 }
 
-func (e *Elevator) Idle() {
+func (e *elevator) Idle() {
+	SetDoorOpenLamp(false)
 	simreq := makeSimReq(t.OrderType(2 + e.ID))
-	dir, _ := ChooseDirection(*e, simreq, 10)
-	if !(dir == MD_Stop) && !GetObstruction() {
-		SetDoorOpenLamp(false)
+	dir, _ := ChooseDirection(*e, simreq, 10) //hva skal duration være?
+	if !(dir == MD_Stop) {
+
 		e.Direction = dir
-		e.State = ELEV_RUNNING
+		e.State = t.ELEV_RUNNING
 		return
 	} else {
 		e.Direction = e.Direction * (-1)
-		if e.viable_floor(e.In_floor) && !GetObstruction() {
-			e.State = ELEV_DOOR_OPEN
+		if isOrder(mdToOrdertype(e.Direction), e.In_floor, simreq) || isOrder(t.OrderType(e.ID), e.In_floor, simreq) {
+			e.State = t.ELEV_DOOR_OPEN
 			e.doorOpenTime = time.Now()
 		}
 	}
-	SetDoorOpenLamp(true)
 	SetMotorDirection(MD_Stop)
 }

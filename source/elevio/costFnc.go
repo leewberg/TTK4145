@@ -1,15 +1,14 @@
-package assignment
+package elevio
 
 import (
 	cfg "heislabb/source/config"
 	db "heislabb/source/database"
-	elevio "heislabb/source/elevio"
 	t "heislabb/source/types"
 )
 
-func costFunction(orderType t.OrderType, orderFloor int) int {
+func CostFunction(orderType t.OrderType, orderFloor int) int {
 	// finds the cost for the elevator to do a spesific order, by simulating execution
-	elevData := elevio.LocalElevator // shallow copy should be sufficient
+	elevData := LocalElevator // shallow copy should be sufficient
 	duration := 0
 	ourCab := t.GetMyCab(cfg.MyID)
 
@@ -27,19 +26,19 @@ func costFunction(orderType t.OrderType, orderFloor int) int {
 	}
 	simRequests[orderType][orderFloor] = true
 	if elevData.In_floor == cfg.NumElevators-1 {
-		elevData.Direction = elevio.MD_Down
+		elevData.Direction = MD_Down
 	} else if elevData.In_floor == 0 {
-		elevData.Direction = elevio.MD_Up
+		elevData.Direction = MD_Up
 	}
 
 	// initial considerations
 	switch elevData.State {
-	case elevio.ELEV_BOOT:
+	case t.ELEV_BOOT:
 		return t.INF
-	case elevio.ELEV_DOOR_OPEN:
+	case t.ELEV_DOOR_OPEN:
 		duration -= cfg.DoorOpenTime / 2
 	default:
-		elevData.Direction, _ = elevio.ChooseDirection(elevData, simRequests, duration)
+		elevData.Direction, _ = ChooseDirection(elevData, simRequests, duration)
 	}
 	if elevData.Is_between_floors {
 		duration += cfg.TravelTime / 2
@@ -55,26 +54,26 @@ func costFunction(orderType t.OrderType, orderFloor int) int {
 			if !simRequests[orderType][orderFloor] {
 				return duration
 			}
-			elevData.Direction, _ = elevio.ChooseDirection(elevData, simRequests, duration)
+			elevData.Direction, _ = ChooseDirection(elevData, simRequests, duration)
 		}
 		elevData.In_floor += int(elevData.Direction)
 		duration += cfg.TravelTime
 	}
 }
 
-func simulatedClearRequests(elevData elevio.Elevator, simRequests map[t.OrderType][]bool) {
+func simulatedClearRequests(elevData elevator, simRequests map[t.OrderType][]bool) {
 	simRequests[t.GetMyCab(cfg.MyID)][elevData.In_floor] = false
 	switch elevData.Direction {
-	case elevio.MD_Up:
+	case MD_Up:
 		if simRequests[t.HallUp][elevData.In_floor] {
 			simRequests[t.HallUp][elevData.In_floor] = false
-		} else if !elevio.RequestsAbove(elevData, simRequests) {
+		} else if !requestsAbove(elevData, simRequests) {
 			simRequests[t.HallDown][elevData.In_floor] = false
 		}
-	case elevio.MD_Down:
+	case MD_Down:
 		if simRequests[t.HallDown][elevData.In_floor] {
 			simRequests[t.HallDown][elevData.In_floor] = false
-		} else if !elevio.RequestsBelow(elevData, simRequests) {
+		} else if !requestsBelow(elevData, simRequests) {
 			simRequests[t.HallUp][elevData.In_floor] = false
 		}
 	default: // MD_Stop
@@ -83,21 +82,21 @@ func simulatedClearRequests(elevData elevio.Elevator, simRequests map[t.OrderTyp
 	}
 }
 
-func elevShouldStop(elevData elevio.Elevator, simRequests map[t.OrderType][]bool) (shouldStop bool) {
+func elevShouldStop(elevData elevator, simRequests map[t.OrderType][]bool) (shouldStop bool) {
 	// An out of bounds check failed here at index 4. so in_floor likley got to high
 	shouldStop = false
 	ourCab := t.GetMyCab(cfg.MyID)
 
 	switch elevData.Direction {
-	case elevio.MD_Up:
+	case MD_Up:
 		return (simRequests[t.HallUp][elevData.In_floor] ||
 			simRequests[ourCab][elevData.In_floor] ||
-			!elevio.RequestsAbove(elevData, simRequests) ||
+			!requestsAbove(elevData, simRequests) ||
 			elevData.In_floor >= cfg.NumFloors-1)
-	case elevio.MD_Down:
+	case MD_Down:
 		return (simRequests[t.HallDown][elevData.In_floor] ||
 			simRequests[ourCab][elevData.In_floor] ||
-			!elevio.RequestsBelow(elevData, simRequests) ||
+			!requestsBelow(elevData, simRequests) ||
 			elevData.In_floor == 0)
 	default: // case MD_Stop
 		return true
