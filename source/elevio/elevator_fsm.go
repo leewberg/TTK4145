@@ -18,18 +18,20 @@ type elevator struct {
 var LocalElevator elevator
 
 func (e *elevator) Elev_routine() {
+	ticker := time.NewTicker(cfg.BroadcastPeriod * time.Millisecond)
+	defer ticker.Stop()
 	for {
 		switch e.state {
 		case t.ELEV_BOOT:
 			e.Init()
 		case t.ELEV_IDLE:
-			e.Idle()
+			e.idle()
 		case t.ELEV_DOOR_OPEN:
-			e.DoorOpen()
+			e.doorOpen()
 		case t.ELEV_RUNNING:
-			e.Run()
+			e.run()
 		}
-		time.Sleep(_pollRate)
+		<-ticker.C
 	}
 }
 
@@ -53,7 +55,7 @@ func (e *elevator) Init() {
 	e.state = t.ELEV_IDLE
 }
 
-func (e *elevator) DoorOpen() {
+func (e *elevator) doorOpen() {
 	setMotorDirection(MD_Stop)
 	setDoorOpenLamp(true)
 	if time.Since(e.doorOpenedTime) > cfg.DoorOpenTime*time.Millisecond {
@@ -81,7 +83,7 @@ func (e *elevator) DoorOpen() {
 	}
 }
 
-func (e *elevator) Run() {
+func (e *elevator) run() {
 	setMotorDirection(e.direction)
 	if !e.is_between_floors {
 		orderMatrix := db.GetOrderMatrix(t.GetMyCab(cfg.MyID))
@@ -94,7 +96,7 @@ func (e *elevator) Run() {
 	}
 }
 
-func (e *elevator) Idle() {
+func (e *elevator) idle() {
 	setDoorOpenLamp(false)
 	orderMatrix := db.GetOrderMatrix(t.GetMyCab(cfg.MyID))
 	dir := chooseDirection(*e, orderMatrix)
