@@ -1,22 +1,4 @@
-Elevator driver for Go
+Code for project in TTK4145 Real time programming, group 5
 ======================
 
-See [`main.go`](main.go) for usage example. The code is runnable with just `go run main.go`
-
----
-
-Add these lines to your `go.mod` file:
-```
-require Driver-go v0.0.0
-replace Driver-go => ./Driver-go
-```
-Where `./Driver-go` is the relative path to this folder, after you have downloaded it.
-
-
-
-
-
-
-
-
-
+Soltion is centred around a collective database which is consistent accross all nodes, and the nodes make actions based on the database.
