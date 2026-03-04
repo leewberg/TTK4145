@@ -25,7 +25,7 @@ func chooseDirection(elevData elevator, orderMatrix map[t.OrderType][]bool) t.Mo
 	case t.MD_Up:
 		if requestsAbove(elevData, orderMatrix) {
 			return t.MD_Up
-		} else if anyRequestsAtFloor(elevData.in_floor, orderMatrix) {
+		} else if anyRequestsAtFloor(elevData.inFloor, orderMatrix) {
 			return t.MD_Stop
 		} else if requestsBelow(elevData, orderMatrix) {
 			return t.MD_Down
@@ -35,7 +35,7 @@ func chooseDirection(elevData elevator, orderMatrix map[t.OrderType][]bool) t.Mo
 	default:
 		if requestsBelow(elevData, orderMatrix) {
 			return t.MD_Down
-		} else if anyRequestsAtFloor(elevData.in_floor, orderMatrix) {
+		} else if anyRequestsAtFloor(elevData.inFloor, orderMatrix) {
 			return t.MD_Stop
 		} else if requestsAbove(elevData, orderMatrix) {
 			return t.MD_Up
@@ -46,7 +46,7 @@ func chooseDirection(elevData elevator, orderMatrix map[t.OrderType][]bool) t.Mo
 }
 
 func requestsAbove(elevData elevator, orderMatrix map[t.OrderType][]bool) bool {
-	for floor := elevData.in_floor + 1; floor < cfg.NumFloors; floor++ {
+	for floor := elevData.inFloor + 1; floor < cfg.NumFloors; floor++ {
 		if anyRequestsAtFloor(floor, orderMatrix) {
 			return true
 		}
@@ -55,7 +55,7 @@ func requestsAbove(elevData elevator, orderMatrix map[t.OrderType][]bool) bool {
 }
 
 func requestsBelow(elevData elevator, orderMatrix map[t.OrderType][]bool) bool {
-	for floor := elevData.in_floor - 1; floor >= 0; floor-- {
+	for floor := elevData.inFloor - 1; floor >= 0; floor-- {
 		if anyRequestsAtFloor(floor, orderMatrix) {
 			return true
 		}

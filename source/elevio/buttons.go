@@ -9,16 +9,16 @@ import (
 )
 
 func ButtonRoutine(e *elevator) {
-	var drv_buttons = make(chan t.ButtonEvent)
+	var drvButtons = make(chan t.ButtonEvent)
 	var drv_floors = make(chan int)
 	var drv_obstr = make(chan bool)
-	go PollButtons(drv_buttons)
+	go PollButtons(drvButtons)
 	go PollFloorSensor(drv_floors)
 	go PollObstructionSwitch(drv_obstr)
 
 	for {
 		select {
-		case a := <-drv_buttons: //hall up, down, or ANY cab button is pressed
+		case a := <-drvButtons: //hall up, down, or ANY cab button is pressed
 			fmt.Printf("%+v\n", a)
 			if a.Button == t.BT_HallDown || a.Button == t.BT_HallUp {
 				db.ActivateOrder(t.OrderType(a.Button), a.Floor)
@@ -30,16 +30,16 @@ func ButtonRoutine(e *elevator) {
 
 		case a := <-drv_floors:
 			if a != -1 { //update floor for elevator object if in a floor and not between floors
-				if e.is_between_floors && e.in_floor != a { //moved into a new floor
+				if e.isBetweenFloors && e.inFloor != a { //moved into a new floor
 					db.Heartbeat()
 				}
 
-				e.in_floor = a
+				e.inFloor = a
 				SetFloorIndicator(a)
-				e.is_between_floors = false
+				e.isBetweenFloors = false
 
 			} else {
-				e.is_between_floors = true
+				e.isBetweenFloors = true
 			}
 		}
 		if getObstruction() {

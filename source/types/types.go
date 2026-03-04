@@ -35,10 +35,10 @@ type WorldView struct {
 	Orders   [][]OrderData `json:"orders"`
 }
 
-type Elev_states int
+type ElevStates int
 
 const (
-	ELEV_BOOT Elev_states = iota
+	ELEV_BOOT ElevStates = iota
 	ELEV_IDLE
 	ELEV_RUNNING
 	ELEV_DOOR_OPEN

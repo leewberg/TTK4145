@@ -59,7 +59,7 @@ func elevatorMain() {
 
 	elevio.Init("localhost:"+strconv.Itoa(15657+cfg.MyID), cfg.NumFloors)
 
-	elevio.Clear_all_lights()
+	elevio.ClearAllLights()
 	db.InitOrders()
 	db.InitPeers()
 	elevio.LocalElevator.Init()
@@ -67,7 +67,7 @@ func elevatorMain() {
 	time.Sleep(100 * time.Millisecond)
 	network.StartNetwork(cfg.MyID)
 	go assigner.AssignerRoutine()
-	go elevio.Light_routine(cfg.MyID)
+	go elevio.LightRoutine(cfg.MyID)
 	go elevio.ButtonRoutine(&elevio.LocalElevator)
 	go elevio.LocalElevator.Elev_routine()
 
