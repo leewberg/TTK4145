@@ -67,17 +67,17 @@ func (e *elevator) DoorOpen() {
 	SetMotorDirection(MD_Stop)
 	SetDoorOpenLamp(true)
 	if time.Since(e.doorOpenTime) > cfg.DoorOpenTime*time.Millisecond {
-		simreq := db.GetOrderMatrix(t.GetMyCab(cfg.MyID))
-		if isOrder(mdToOrdertype(e.Direction), e.In_floor, simreq) {
+		orderMatrix := db.GetOrderMatrix(t.GetMyCab(cfg.MyID))
+		if isOrder(mdToOrdertype(e.Direction), e.In_floor, orderMatrix) {
 			db.ClearOrder(mdToOrdertype(e.Direction), e.In_floor)
-		} else if isOrder(mdToOrdertype(e.Direction*(-1)), e.In_floor, simreq) {
+		} else if isOrder(mdToOrdertype(e.Direction*(-1)), e.In_floor, orderMatrix) {
 			db.ClearOrder(mdToOrdertype(e.Direction*(-1)), e.In_floor)
 		}
 
 		db.ClearOrder(t.GetMyCab(cfg.MyID), e.In_floor)
 
 		if !GetObstruction() { //last check before exiting door-open state
-			dir := ChooseDirection(*e, simreq)
+			dir := ChooseDirection(*e, orderMatrix)
 			if !(dir == MD_Stop) {
 				SetDoorOpenLamp(false)
 				e.Direction = dir
@@ -94,8 +94,8 @@ func (e *elevator) DoorOpen() {
 func (e *elevator) Run() {
 	SetMotorDirection(e.Direction)
 	if !e.Is_between_floors {
-		simreq := db.GetOrderMatrix(t.GetMyCab(cfg.MyID))
-		if isOrder(mdToOrdertype(e.Direction), e.In_floor, simreq) || isOrder(t.OrderType(e.ID), e.In_floor, simreq) {
+		orderMatrix := db.GetOrderMatrix(t.GetMyCab(cfg.MyID))
+		if isOrder(mdToOrdertype(e.Direction), e.In_floor, orderMatrix) || isOrder(t.OrderType(e.ID), e.In_floor, orderMatrix) {
 			e.State = t.ELEV_DOOR_OPEN
 			e.doorOpenTime = time.Now()
 		} else {
@@ -106,8 +106,8 @@ func (e *elevator) Run() {
 
 func (e *elevator) Idle() {
 	SetDoorOpenLamp(false)
-	simreq := db.GetOrderMatrix(t.OrderType(2 + e.ID))
-	dir := ChooseDirection(*e, simreq)
+	orderMatrix := db.GetOrderMatrix(t.OrderType(2 + e.ID))
+	dir := ChooseDirection(*e, orderMatrix)
 	if !(dir == MD_Stop) {
 
 		e.Direction = dir
@@ -115,7 +115,7 @@ func (e *elevator) Idle() {
 		return
 	} else {
 		e.Direction = e.Direction * (-1)
-		if isOrder(mdToOrdertype(e.Direction), e.In_floor, simreq) || isOrder(t.OrderType(e.ID), e.In_floor, simreq) {
+		if isOrder(mdToOrdertype(e.Direction), e.In_floor, orderMatrix) || isOrder(t.OrderType(e.ID), e.In_floor, orderMatrix) {
 			e.State = t.ELEV_DOOR_OPEN
 			e.doorOpenTime = time.Now()
 		}
