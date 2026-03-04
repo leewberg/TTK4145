@@ -40,8 +40,8 @@ func (e *elevator) Init() {
 	e.doorOpenedTime = time.Now()
 
 	setDoorOpenLamp(false)
-	setStopLamp(false)
 
+	// move down untill we hit a floor
 	a := GetFloor()
 	if a == -1 {
 		setMotorDirection(t.MD_Down)
@@ -49,9 +49,6 @@ func (e *elevator) Init() {
 	}
 
 	e.direction = t.MD_Up
-	setDoorOpenLamp(false)
-	setStopLamp(false)
-
 	e.state = t.ELEV_IDLE
 }
 
@@ -62,7 +59,6 @@ func (e *elevator) doorOpen() {
 	if !e.shouldCloseDoor() {
 		return
 	}
-
 	e.completeOrders()
 	e.exitFromDoorOpen()
 }
@@ -122,10 +118,10 @@ func (e *elevator) run() {
 func (e *elevator) idle() {
 	setDoorOpenLamp(false)
 	orderMatrix := db.GetOrderMatrix(t.GetMyCab(cfg.MyID))
-	dir := chooseDirection(*e, orderMatrix)
+	nextDir := chooseDirection(*e, orderMatrix)
 
-	if !(dir == t.MD_Stop) {
-		e.direction = dir
+	if nextDir != t.MD_Stop {
+		e.direction = nextDir
 		e.state = t.ELEV_RUNNING
 		return
 	} else {

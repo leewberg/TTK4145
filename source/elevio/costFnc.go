@@ -12,11 +12,11 @@ func CostFunction(orderType t.OrderType, orderFloor int) int {
 	duration := 0
 	ourCab := t.GetMyCab(cfg.MyID)
 
-	// copy down data so we don't override the actual orders
 	orderMatrix := db.GetOrderMatrix(ourCab)
-
 	orderMatrix[orderType][orderFloor] = true
-	if elevData.inFloor == cfg.NumElevators-1 {
+
+	//bounds check
+	if elevData.inFloor == cfg.NumFloors-1 {
 		elevData.direction = t.MD_Down
 	} else if elevData.inFloor == 0 {
 		elevData.direction = t.MD_Up
