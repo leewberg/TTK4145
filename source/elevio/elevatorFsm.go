@@ -106,7 +106,11 @@ func (e *elevator) run() {
 	setMotorDirection(e.direction)
 	if !e.isBetweenFloors {
 		orderMatrix := db.GetOrderMatrix(t.GetMyCab(cfg.MyID))
-		if isOrder(mdToOrdertype(e.direction), e.inFloor, orderMatrix) || isOrder(t.OrderType(cfg.MyID), e.inFloor, orderMatrix) {
+
+		ourCab := t.GetMyCab(cfg.MyID)
+		dirOrder := mdToOrdertype(e.direction)
+
+		if isOrder(dirOrder, e.inFloor, orderMatrix) || isOrder(ourCab, e.inFloor, orderMatrix) {
 			e.state = t.ELEV_DOOR_OPEN
 			e.doorOpenedTime = time.Now()
 		} else {
@@ -118,15 +122,17 @@ func (e *elevator) run() {
 func (e *elevator) idle() {
 	setDoorOpenLamp(false)
 	orderMatrix := db.GetOrderMatrix(t.GetMyCab(cfg.MyID))
-	nextDir := chooseDirection(*e, orderMatrix)
+	dir := chooseDirection(*e, orderMatrix)
 
-	if nextDir != t.MD_Stop {
-		e.direction = nextDir
+	ourCab := t.GetMyCab(cfg.MyID)
+	revDirOrder := mdToOrdertype(e.direction * -1)
+
+	if !(dir == t.MD_Stop) {
+		e.direction = dir
 		e.state = t.ELEV_RUNNING
 		return
 	} else {
-		e.direction = e.direction * (-1)
-		if isOrder(mdToOrdertype(e.direction), e.inFloor, orderMatrix) || isOrder(t.OrderType(cfg.MyID), e.inFloor, orderMatrix) {
+		if isOrder(revDirOrder, e.inFloor, orderMatrix) || isOrder(ourCab, e.inFloor, orderMatrix) {
 			e.state = t.ELEV_DOOR_OPEN
 			e.doorOpenedTime = time.Now()
 		}
