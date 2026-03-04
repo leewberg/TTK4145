@@ -27,7 +27,9 @@ func runSender(netID string, txChan chan<- t.WorldView) {
 	ticker := time.NewTicker(cfg.BroadcastPeriod * time.Millisecond)
 	defer ticker.Stop()
 
-	for range ticker.C {
+	for {
+		<-ticker.C
+
 		select {
 		case txChan <- buildWorldSnapshot(netID):
 		default:
