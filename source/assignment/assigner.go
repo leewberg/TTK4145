@@ -30,7 +30,7 @@ func assignHallOrder(dir t.OrderType, floor int) {
 	now := time.Now().UnixMilli()
 
 	if order.IsActive() {
-		myCost := costFunction(dir, floor)
+		myCost := elevio.CostFunction(dir, floor)
 		isBidWindow := now-order.AssignedTime < cfg.BiddingTime
 		hasLowerbid := myCost+cfg.BiddingMinRaise < order.Cost
 		hasTimedOut := now-max(db.LastSeen(order.AssignedID), order.AssignedTime) > cfg.OrderTimeout
