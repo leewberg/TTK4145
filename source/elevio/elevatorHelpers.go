@@ -25,7 +25,7 @@ func chooseDirection(elevData elevator, orderMatrix map[t.OrderType][]bool) t.Mo
 	case t.MD_Up:
 		if requestsAbove(elevData, orderMatrix) {
 			return t.MD_Up
-		} else if anyRequestsAtFloor(elevData.inFloor, orderMatrix) {
+		} else if anyRequestsAtFloor(elevData.lastFloor, orderMatrix) {
 			return t.MD_Stop
 		} else if requestsBelow(elevData, orderMatrix) {
 			return t.MD_Down
@@ -35,7 +35,7 @@ func chooseDirection(elevData elevator, orderMatrix map[t.OrderType][]bool) t.Mo
 	default:
 		if requestsBelow(elevData, orderMatrix) {
 			return t.MD_Down
-		} else if anyRequestsAtFloor(elevData.inFloor, orderMatrix) {
+		} else if anyRequestsAtFloor(elevData.lastFloor, orderMatrix) {
 			return t.MD_Stop
 		} else if requestsAbove(elevData, orderMatrix) {
 			return t.MD_Up
@@ -45,8 +45,27 @@ func chooseDirection(elevData elevator, orderMatrix map[t.OrderType][]bool) t.Mo
 	}
 }
 
+func elevShouldStop(elev elevator, orderMatrix map[t.OrderType][]bool) bool {
+	ourCab := t.GetMyCab(cfg.MyID)
+
+	switch elev.direction {
+	case t.MD_Up:
+		return (orderMatrix[t.HallUp][elev.lastFloor] ||
+			orderMatrix[ourCab][elev.lastFloor] ||
+			!requestsAbove(elev, orderMatrix) ||
+			elev.lastFloor >= cfg.NumFloors-1)
+	case t.MD_Down:
+		return (orderMatrix[t.HallDown][elev.lastFloor] ||
+			orderMatrix[ourCab][elev.lastFloor] ||
+			!requestsBelow(elev, orderMatrix) ||
+			elev.lastFloor == 0)
+	default: // case MD_Stop
+		return true
+	}
+}
+
 func requestsAbove(elevData elevator, orderMatrix map[t.OrderType][]bool) bool {
-	for floor := elevData.inFloor + 1; floor < cfg.NumFloors; floor++ {
+	for floor := elevData.lastFloor + 1; floor < cfg.NumFloors; floor++ {
 		if anyRequestsAtFloor(floor, orderMatrix) {
 			return true
 		}
@@ -55,7 +74,7 @@ func requestsAbove(elevData elevator, orderMatrix map[t.OrderType][]bool) bool {
 }
 
 func requestsBelow(elevData elevator, orderMatrix map[t.OrderType][]bool) bool {
-	for floor := elevData.inFloor - 1; floor >= 0; floor-- {
+	for floor := elevData.lastFloor - 1; floor >= 0; floor-- {
 		if anyRequestsAtFloor(floor, orderMatrix) {
 			return true
 		}

@@ -8,11 +8,13 @@ import (
 )
 
 type elevator struct {
-	state           t.ElevStates
-	inFloor         int
-	direction       t.MotorDirection //only up or down, never stop
+	state          t.ElevStates
+	direction      t.MotorDirection //only up or down, never stop
+	doorOpenedTime time.Time
+
+	// written only by button.go
+	lastFloor       int
 	isBetweenFloors bool
-	doorOpenedTime  time.Time
 }
 
 var LocalElevator elevator
@@ -80,12 +82,12 @@ func (e *elevator) completeOrders() {
 	dirOrder := mdToOrdertype(e.direction)
 	revDirOrder := mdToOrdertype(e.direction * -1)
 
-	if isOrder(dirOrder, e.inFloor, orderMatrix) {
-		db.ClearOrder(dirOrder, e.inFloor)
-	} else if isOrder(revDirOrder, e.inFloor, orderMatrix) {
-		db.ClearOrder(revDirOrder, e.inFloor)
+	if isOrder(dirOrder, e.lastFloor, orderMatrix) {
+		db.ClearOrder(dirOrder, e.lastFloor)
+	} else if isOrder(revDirOrder, e.lastFloor, orderMatrix) {
+		db.ClearOrder(revDirOrder, e.lastFloor)
 	}
-	db.ClearOrder(t.GetMyCab(cfg.MyID), e.inFloor)
+	db.ClearOrder(t.GetMyCab(cfg.MyID), e.lastFloor)
 }
 
 func (e *elevator) exitFromDoorOpen() {
@@ -104,13 +106,14 @@ func (e *elevator) exitFromDoorOpen() {
 
 func (e *elevator) run() {
 	setMotorDirection(e.direction)
-	if !e.isBetweenFloors {
-		orderMatrix := db.GetOrderMatrix(t.GetMyCab(cfg.MyID))
+	if e.isBetweenFloors {
+		return
+	}
 
-		ourCab := t.GetMyCab(cfg.MyID)
-		dirOrder := mdToOrdertype(e.direction)
+	orderMatrix := db.GetOrderMatrix(t.GetMyCab(cfg.MyID))
 
-		if isOrder(dirOrder, e.inFloor, orderMatrix) || isOrder(ourCab, e.inFloor, orderMatrix) {
+	if elevShouldStop(*e, orderMatrix) {
+		if anyRequestsAtFloor(e.lastFloor, orderMatrix) {
 			e.state = t.ELEV_DOOR_OPEN
 			e.doorOpenedTime = time.Now()
 		} else {
@@ -121,21 +124,16 @@ func (e *elevator) run() {
 
 func (e *elevator) idle() {
 	setDoorOpenLamp(false)
+	setMotorDirection(t.MD_Stop)
+
 	orderMatrix := db.GetOrderMatrix(t.GetMyCab(cfg.MyID))
 	dir := chooseDirection(*e, orderMatrix)
-
-	ourCab := t.GetMyCab(cfg.MyID)
-	revDirOrder := mdToOrdertype(e.direction * -1)
 
 	if !(dir == t.MD_Stop) {
 		e.direction = dir
 		e.state = t.ELEV_RUNNING
-		return
-	} else {
-		if isOrder(revDirOrder, e.inFloor, orderMatrix) || isOrder(ourCab, e.inFloor, orderMatrix) {
-			e.state = t.ELEV_DOOR_OPEN
-			e.doorOpenedTime = time.Now()
-		}
+	} else if anyRequestsAtFloor(e.lastFloor, orderMatrix) {
+		e.state = t.ELEV_DOOR_OPEN
+		e.doorOpenedTime = time.Now()
 	}
-	setMotorDirection(t.MD_Stop)
 }
