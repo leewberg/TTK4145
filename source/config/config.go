@@ -9,11 +9,10 @@ const (
 	BroadcastPort = 16569
 
 	// all ms
-	OrderTimeout     = 7000
-	TravelTime       = 2500
-	DoorOpenTime     = 3000
-	BiddingTime      = 500
-	BiddingMinRaise  = 100
-	PartitionTimeout = 500
-	BroadcastPeriod  = 50
+	OrderTimeout    = 7000
+	TravelTime      = 2500
+	DoorOpenTime    = 3000
+	BiddingTime     = 200
+	BiddingMinRaise = 100
+	BroadcastPeriod = 50
 )
