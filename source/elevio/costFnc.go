@@ -1,10 +1,13 @@
 package elevio
 
 import (
+	"fmt"
 	cfg "heislabb/source/config"
 	db "heislabb/source/database"
 	t "heislabb/source/types"
 )
+
+var maxIter = 100
 
 func CostFunction(orderType t.OrderType, orderFloor int) int {
 	// finds the cost for the elevator to do a spesific order, by simulating execution
@@ -36,7 +39,7 @@ func CostFunction(orderType t.OrderType, orderFloor int) int {
 		elevData.lastFloor += int(elevData.direction)
 	}
 
-	for {
+	for range maxIter {
 		if elevShouldStop(elevData, orderMatrix) {
 
 			// clears all orders for the floor
@@ -50,6 +53,9 @@ func CostFunction(orderType t.OrderType, orderFloor int) int {
 		elevData.lastFloor += int(elevData.direction)
 		duration += cfg.TravelTime
 	}
+
+	fmt.Println("[Worker] Warn: exceeded max number of iterations to determine order cost")
+	return t.INF
 }
 
 func clearMatrixOrders(elevData elevator, orderMatrix map[t.OrderType][]bool) {

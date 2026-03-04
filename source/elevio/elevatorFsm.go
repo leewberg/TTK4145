@@ -129,7 +129,7 @@ func (e *elevator) idle() {
 	orderMatrix := db.GetOrderMatrix(t.GetMyCab(cfg.MyID))
 	dir := chooseDirection(*e, orderMatrix)
 
-	if !(dir == t.MD_Stop) {
+	if dir != t.MD_Stop {
 		e.direction = dir
 		e.state = t.ELEV_RUNNING
 	} else if anyRequestsAtFloor(e.lastFloor, orderMatrix) {
