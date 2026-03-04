@@ -13,73 +13,70 @@ func StartNetwork(myID int) {
 
 	netID := fmt.Sprintf("elev-%d", myID)
 
-	outbox := make(chan t.WorldView, 16)
-	inbox := make(chan t.WorldView, 64)
-	go bcast.Transmitter(cfg.BroadcastPort, outbox)
-	go bcast.Receiver(cfg.BroadcastPort, inbox)
+	txChan := make(chan t.WorldView, 16)
+	rxChan := make(chan t.WorldView, 64)
 
-	go func() { // sender
-		ticker := time.NewTicker(cfg.BroadcastPeriod * time.Millisecond)
-		defer ticker.Stop()
+	go bcast.Transmitter(cfg.BroadcastPort, txChan)
+	go bcast.Receiver(cfg.BroadcastPort, rxChan)
 
-		for {
-			<-ticker.C
-
-			select {
-			case outbox <- getWorldSnapshot(netID):
-			default:
-				fmt.Println("Warn: Network outbox full, dropping packet")
-			}
-			// fmt.Println("State of the order", ReadOrderData(HALL_UP, 2))
-			// fmt.Println("elev 0 functional", getFunctionalElevators()[MY_ID])
-			// fmt.Println("elev 0 last work", getLastProofOfWork(MY_ID))
-			// fmt.Println("elev 0 last fail", getLastFailedTime(MY_ID))
-		}
-	}()
-
-	go func() { // receiver
-		for msg := range inbox {
-			if msg.Sender == netID {
-				continue
-			}
-
-			//simulate packet loss
-			if time.Now().UnixNano()%2 == 0 {
-				continue
-			}
-
-			mergeIncomingWorld(msg)
-			// fmt.Println("Got msg at time", time.Now())
-		}
-	}()
+	go runSender(netID, txChan)
+	go runReceiver(netID, rxChan)
 }
 
-func getWorldSnapshot(sender string) t.WorldView {
+func runSender(netID string, txChan chan<- t.WorldView) {
+	ticker := time.NewTicker(cfg.BroadcastPeriod * time.Millisecond)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		select {
+		case txChan <- buildWorldSnapshot(netID):
+		default:
+			fmt.Println("Warn: Network outbox full, dropping packet")
+		}
+
+	}
+}
+
+func runReceiver(netID string, rxChan <-chan t.WorldView) {
+	for msg := range rxChan {
+
+		// Ignore our own broadcast
+		if msg.Sender == netID {
+			continue
+		}
+
+		mergeIncomingWorld(msg)
+
+	}
+}
+
+func buildWorldSnapshot(sender string) t.WorldView {
 	return t.WorldView{
 		Sender:   sender,
-		PeerFail: snapshotPeerFail(),
-		PeerSeen: snapshotPeerSeen(),
-		Orders:   snapshotOrders(),
+		PeerFail: snapshotPeerFailTime(),
+		PeerSeen: snapshotPeerSeenTime(),
+		Orders:   snapshotAllOrders(),
 	}
 }
 
-func snapshotPeerFail() []int64 {
-	out := make([]int64, cfg.NumElevators)
-	for id := range cfg.NumElevators {
-		out[id] = db.LastMiss(id)
+func snapshotPeerFailTime() []int64 {
+	failTime := make([]int64, cfg.NumElevators)
+
+	for elevatorID := range cfg.NumElevators {
+		failTime[elevatorID] = db.LastMiss(elevatorID)
 	}
-	return out
+	return failTime
 }
 
-func snapshotPeerSeen() []int64 {
-	out := make([]int64, cfg.NumElevators)
-	for id := range cfg.NumElevators {
-		out[id] = db.LastSeen(id)
+func snapshotPeerSeenTime() []int64 {
+	seenTime := make([]int64, cfg.NumElevators)
+	for elevatorID := range cfg.NumElevators {
+		seenTime[elevatorID] = db.LastSeen(elevatorID)
 	}
-	return out
+	return seenTime
 }
 
-func snapshotOrders() [][]t.OrderData {
+func snapshotAllOrders() [][]t.OrderData {
 	typeCount := cfg.NumElevators + 2 // down, up and one cab per elevator
 
 	out := make([][]t.OrderData, typeCount)
@@ -95,8 +92,8 @@ func snapshotOrders() [][]t.OrderData {
 
 func mergeIncomingWorld(in t.WorldView) {
 	// Merge peer liveness
-	for ID := range in.PeerSeen {
-		db.MergePeerSnapshot(ID, in.PeerSeen[ID], in.PeerFail[ID])
+	for elevatorID := range in.PeerSeen {
+		db.MergePeerSnapshot(elevatorID, in.PeerSeen[elevatorID], in.PeerFail[elevatorID])
 	}
 
 	// Merge orders
