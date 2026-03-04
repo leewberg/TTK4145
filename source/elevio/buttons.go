@@ -42,9 +42,5 @@ func ButtonRoutine(e *elevator) {
 				e.isBetweenFloors = true
 			}
 		}
-		if getObstruction() {
-			e.doorOpenedTime = time.Now()
-		}
 	}
-
 }

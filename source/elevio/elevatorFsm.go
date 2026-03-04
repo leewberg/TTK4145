@@ -58,28 +58,51 @@ func (e *elevator) Init() {
 func (e *elevator) doorOpen() {
 	setMotorDirection(t.MD_Stop)
 	setDoorOpenLamp(true)
-	if time.Since(e.doorOpenedTime) > cfg.DoorOpenTime*time.Millisecond {
-		orderMatrix := db.GetOrderMatrix(t.GetMyCab(cfg.MyID))
-		if isOrder(mdToOrdertype(e.direction), e.inFloor, orderMatrix) {
-			db.ClearOrder(mdToOrdertype(e.direction), e.inFloor)
-		} else if isOrder(mdToOrdertype(e.direction*(-1)), e.inFloor, orderMatrix) {
-			db.ClearOrder(mdToOrdertype(e.direction*(-1)), e.inFloor)
-		}
 
-		db.ClearOrder(t.GetMyCab(cfg.MyID), e.inFloor)
+	if !e.shouldCloseDoor() {
+		return
+	}
 
-		if !getObstruction() { //last check before exiting door-open state
-			dir := chooseDirection(*e, orderMatrix)
-			if !(dir == t.MD_Stop) {
-				setDoorOpenLamp(false)
-				e.direction = dir
-				e.state = t.ELEV_RUNNING
-				return
-			} else {
-				e.state = t.ELEV_IDLE
-				return
-			}
-		}
+	e.completeOrders()
+	e.exitFromDoorOpen()
+}
+
+func (e *elevator) shouldCloseDoor() bool {
+	if getObstruction() {
+		e.doorOpenedTime = time.Now()
+		return false
+	}
+	if time.Since(e.doorOpenedTime) < cfg.DoorOpenTime*time.Millisecond {
+		return false
+	}
+	return true
+}
+
+func (e *elevator) completeOrders() {
+	orderMatrix := db.GetOrderMatrix(t.GetMyCab(cfg.MyID))
+
+	dirOrder := mdToOrdertype(e.direction)
+	revDirOrder := mdToOrdertype(e.direction * -1)
+
+	if isOrder(dirOrder, e.inFloor, orderMatrix) {
+		db.ClearOrder(dirOrder, e.inFloor)
+	} else if isOrder(revDirOrder, e.inFloor, orderMatrix) {
+		db.ClearOrder(revDirOrder, e.inFloor)
+	}
+	db.ClearOrder(t.GetMyCab(cfg.MyID), e.inFloor)
+}
+
+func (e *elevator) exitFromDoorOpen() {
+	orderMatrix := db.GetOrderMatrix(t.GetMyCab(cfg.MyID))
+	dir := chooseDirection(*e, orderMatrix)
+
+	setDoorOpenLamp(false)
+
+	if dir == t.MD_Stop {
+		e.state = t.ELEV_IDLE
+	} else {
+		e.direction = dir
+		e.state = t.ELEV_RUNNING
 	}
 }
 
