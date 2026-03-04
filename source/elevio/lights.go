@@ -7,30 +7,30 @@ import (
 	"time"
 )
 
-func Clear_all_lights() {
+func ClearAllLights() {
 	for i := range cfg.NumFloors {
 		//clear hall buttons
 		for j := range 2 {
-			SetButtonLamp(ButtonType(j), i, false)
+			SetButtonLamp(t.ButtonType(j), i, false)
 		}
 		//clear cab button
-		SetButtonLamp(BT_Cab, i, false)
+		SetButtonLamp(t.BT_Cab, i, false)
 	}
 }
 
-func Light_routine(elevID int) {
+func LightRoutine(elevID int) {
 	for {
 		for i := range cfg.NumFloors {
 			//check hall buttons
 			for j := range 2 {
-				order_dir := db.GetOrder(t.OrderType(j), i)
-				SetButtonLamp(ButtonType(j), i, order_dir.IsActive())
+				orderDir := db.GetOrder(t.OrderType(j), i)
+				SetButtonLamp(t.ButtonType(j), i, orderDir.IsActive())
 
 			}
 			//check cab button
 			ourCab := t.GetMyCab(cfg.MyID)
-			order_cab := db.GetOrder(ourCab, i)
-			SetButtonLamp(BT_Cab, i, order_cab.IsActive())
+			orderCab := db.GetOrder(ourCab, i)
+			SetButtonLamp(t.BT_Cab, i, orderCab.IsActive())
 		}
 		time.Sleep(100 * time.Millisecond)
 
