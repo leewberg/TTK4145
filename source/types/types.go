@@ -35,12 +35,32 @@ type WorldView struct {
 	Orders   [][]OrderData `json:"orders"`
 }
 
-type Elev_states int
+type ElevStates int
 
 const (
-	ELEV_BOOT Elev_states = iota
+	ELEV_BOOT ElevStates = iota
 	ELEV_IDLE
 	ELEV_RUNNING
 	ELEV_DOOR_OPEN
 )
 
+type MotorDirection int
+
+const (
+	MD_Up   MotorDirection = 1
+	MD_Down MotorDirection = -1
+	MD_Stop MotorDirection = 0
+)
+
+type ButtonType int
+
+const (
+	BT_HallUp ButtonType = iota
+	BT_HallDown
+	BT_Cab
+)
+
+type ButtonEvent struct {
+	Floor  int
+	Button ButtonType
+}

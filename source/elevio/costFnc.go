@@ -1,105 +1,81 @@
 package elevio
 
 import (
+	"fmt"
 	cfg "heislabb/source/config"
 	db "heislabb/source/database"
 	t "heislabb/source/types"
 )
 
+var maxIter = 100
+
 func CostFunction(orderType t.OrderType, orderFloor int) int {
 	// finds the cost for the elevator to do a spesific order, by simulating execution
+	// translated from https://github.com/TTK4145/Project-resources
 	elevData := LocalElevator // shallow copy should be sufficient
 	duration := 0
 	ourCab := t.GetMyCab(cfg.MyID)
 
-	// copy down data so we don't override the actual orders
-	simRequests := make(map[t.OrderType][]bool)
-	for _, orderType := range []t.OrderType{t.HallUp, t.HallDown, ourCab} {
-		simRequests[orderType] = make([]bool, cfg.NumFloors)
-		for floor := range cfg.NumFloors {
-			orderData := db.GetOrder(orderType, floor)
-			if orderData.IsActive() &&
-				orderData.AssignedID == cfg.MyID {
-				simRequests[orderType][floor] = true
-			}
-		}
-	}
-	simRequests[orderType][orderFloor] = true
-	if elevData.In_floor == cfg.NumElevators-1 {
-		elevData.Direction = MD_Down
-	} else if elevData.In_floor == 0 {
-		elevData.Direction = MD_Up
+	orderMatrix := db.GetOrderMatrix(ourCab)
+	orderMatrix[orderType][orderFloor] = true
+
+	//bounds check
+	if elevData.lastFloor == cfg.NumFloors-1 {
+		elevData.direction = t.MD_Down
+	} else if elevData.lastFloor == 0 {
+		elevData.direction = t.MD_Up
 	}
 
 	// initial considerations
-	switch elevData.State {
+	switch elevData.state {
 	case t.ELEV_BOOT:
 		return t.INF
 	case t.ELEV_DOOR_OPEN:
 		duration -= cfg.DoorOpenTime / 2
 	default:
-		elevData.Direction, _ = ChooseDirection(elevData, simRequests, duration)
+		elevData.direction = chooseDirection(elevData, orderMatrix)
 	}
-	if elevData.Is_between_floors {
+	if elevData.isBetweenFloors {
 		duration += cfg.TravelTime / 2
-		elevData.In_floor += int(elevData.Direction)
+		elevData.lastFloor += int(elevData.direction)
 	}
 
-	for {
-		if elevShouldStop(elevData, simRequests) {
+	for range maxIter {
+		if elevShouldStop(elevData, orderMatrix) {
 
 			// clears all orders for the floor
-			simulatedClearRequests(elevData, simRequests)
+			clearMatrixOrders(elevData, orderMatrix)
 			duration += cfg.DoorOpenTime
-			if !simRequests[orderType][orderFloor] {
+			if !orderMatrix[orderType][orderFloor] {
 				return duration
 			}
-			elevData.Direction, _ = ChooseDirection(elevData, simRequests, duration)
+			elevData.direction = chooseDirection(elevData, orderMatrix)
 		}
-		elevData.In_floor += int(elevData.Direction)
+		elevData.lastFloor += int(elevData.direction)
 		duration += cfg.TravelTime
 	}
+
+	fmt.Println("[Worker] Warn: exceeded max number of iterations to determine order cost")
+	return t.INF
 }
 
-func simulatedClearRequests(elevData elevator, simRequests map[t.OrderType][]bool) {
-	simRequests[t.GetMyCab(cfg.MyID)][elevData.In_floor] = false
-	switch elevData.Direction {
-	case MD_Up:
-		if simRequests[t.HallUp][elevData.In_floor] {
-			simRequests[t.HallUp][elevData.In_floor] = false
-		} else if !requestsAbove(elevData, simRequests) {
-			simRequests[t.HallDown][elevData.In_floor] = false
+func clearMatrixOrders(elevData elevator, orderMatrix map[t.OrderType][]bool) {
+	orderMatrix[t.GetMyCab(cfg.MyID)][elevData.lastFloor] = false
+	switch elevData.direction {
+	case t.MD_Up:
+		if orderMatrix[t.HallUp][elevData.lastFloor] {
+			orderMatrix[t.HallUp][elevData.lastFloor] = false
+		} else if !requestsAbove(elevData, orderMatrix) {
+			orderMatrix[t.HallDown][elevData.lastFloor] = false
 		}
-	case MD_Down:
-		if simRequests[t.HallDown][elevData.In_floor] {
-			simRequests[t.HallDown][elevData.In_floor] = false
-		} else if !requestsBelow(elevData, simRequests) {
-			simRequests[t.HallUp][elevData.In_floor] = false
+	case t.MD_Down:
+		if orderMatrix[t.HallDown][elevData.lastFloor] {
+			orderMatrix[t.HallDown][elevData.lastFloor] = false
+		} else if !requestsBelow(elevData, orderMatrix) {
+			orderMatrix[t.HallUp][elevData.lastFloor] = false
 		}
 	default: // MD_Stop
-		simRequests[t.HallDown][elevData.In_floor] = false
-		simRequests[t.HallUp][elevData.In_floor] = false
+		orderMatrix[t.HallDown][elevData.lastFloor] = false
+		orderMatrix[t.HallUp][elevData.lastFloor] = false
 	}
-}
-
-func elevShouldStop(elevData elevator, simRequests map[t.OrderType][]bool) (shouldStop bool) {
-	// An out of bounds check failed here at index 4. so in_floor likley got to high
-	shouldStop = false
-	ourCab := t.GetMyCab(cfg.MyID)
-
-	switch elevData.Direction {
-	case MD_Up:
-		return (simRequests[t.HallUp][elevData.In_floor] ||
-			simRequests[ourCab][elevData.In_floor] ||
-			!requestsAbove(elevData, simRequests) ||
-			elevData.In_floor >= cfg.NumFloors-1)
-	case MD_Down:
-		return (simRequests[t.HallDown][elevData.In_floor] ||
-			simRequests[ourCab][elevData.In_floor] ||
-			!requestsBelow(elevData, simRequests) ||
-			elevData.In_floor == 0)
-	default: // case MD_Stop
-		return true
-	}
-
 }

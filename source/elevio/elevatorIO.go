@@ -3,6 +3,7 @@ package elevio
 import (
 	"fmt"
 	cfg "heislabb/source/config"
+	t "heislabb/source/types"
 	"net"
 	"sync"
 	"time"
@@ -14,27 +15,6 @@ var _initialized bool = false
 var _numFloors int = cfg.NumFloors
 var _mtx sync.Mutex
 var _conn net.Conn
-
-type MotorDirection int
-
-const (
-	MD_Up   MotorDirection = 1
-	MD_Down MotorDirection = -1
-	MD_Stop MotorDirection = 0
-)
-
-type ButtonType int
-
-const (
-	BT_HallUp ButtonType = iota
-	BT_HallDown
-	BT_Cab
-)
-
-type ButtonEvent struct {
-	Floor  int
-	Button ButtonType
-}
 
 func Init(addr string, numFloors int) { //may need to change - initiated for tcp-communication
 	if _initialized {
@@ -51,11 +31,11 @@ func Init(addr string, numFloors int) { //may need to change - initiated for tcp
 	_initialized = true
 }
 
-func SetMotorDirection(dir MotorDirection) {
+func setMotorDirection(dir t.MotorDirection) {
 	write([4]byte{1, byte(dir), 0, 0})
 }
 
-func SetButtonLamp(button ButtonType, floor int, value bool) {
+func SetButtonLamp(button t.ButtonType, floor int, value bool) {
 	write([4]byte{2, byte(button), byte(floor), toByte(value)})
 }
 
@@ -63,23 +43,23 @@ func SetFloorIndicator(floor int) {
 	write([4]byte{3, byte(floor), 0, 0})
 }
 
-func SetDoorOpenLamp(value bool) {
+func setDoorOpenLamp(value bool) {
 	write([4]byte{4, toByte(value), 0, 0})
 }
 
-func SetStopLamp(value bool) {
+func setStopLamp(value bool) {
 	write([4]byte{5, toByte(value), 0, 0})
 }
 
-func PollButtons(receiver chan<- ButtonEvent) {
+func PollButtons(receiver chan<- t.ButtonEvent) {
 	prev := make([][3]bool, _numFloors)
 	for {
 		time.Sleep(_pollRate)
 		for f := 0; f < _numFloors; f++ {
-			for b := ButtonType(0); b < 3; b++ {
+			for b := t.ButtonType(0); b < 3; b++ {
 				v := GetButton(b, f)
 				if v != prev[f][b] && v != false {
-					receiver <- ButtonEvent{f, ButtonType(b)}
+					receiver <- t.ButtonEvent{f, t.ButtonType(b)}
 				}
 				prev[f][b] = v
 			}
@@ -116,7 +96,7 @@ func PollObstructionSwitch(receiver chan<- bool) {
 	prev := false
 	for {
 		time.Sleep(_pollRate)
-		v := GetObstruction()
+		v := getObstruction()
 		if v != prev {
 			receiver <- v
 		}
@@ -124,7 +104,7 @@ func PollObstructionSwitch(receiver chan<- bool) {
 	}
 }
 
-func GetButton(button ButtonType, floor int) bool {
+func GetButton(button t.ButtonType, floor int) bool {
 	a := read([4]byte{6, byte(button), byte(floor), 0})
 	return toBool(a[1])
 }
@@ -143,7 +123,7 @@ func GetStop() bool {
 	return toBool(a[1])
 }
 
-func GetObstruction() bool {
+func getObstruction() bool {
 	a := read([4]byte{9, 0, 0, 0})
 	return toBool(a[1])
 }
