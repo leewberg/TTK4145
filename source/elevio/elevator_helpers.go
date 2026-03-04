@@ -70,11 +70,12 @@ func anyRequestsAtFloor(floor int, simRequests map[t.OrderType][]bool) bool {
 
 func makeSimReq(ourCab t.OrderType) map[t.OrderType][]bool {
 	simRequests := make(map[t.OrderType][]bool)
+	now := time.Now().UnixMilli()
 	for _, orderType := range []t.OrderType{t.HallUp, t.HallDown, ourCab} {
 		simRequests[orderType] = make([]bool, cfg.NumFloors)
 		for floor := range cfg.NumFloors {
 			orderData := db.GetOrder(orderType, floor)
-			if orderData.IsActive() && orderData.AssignedID == cfg.MyID {
+			if orderData.IsActive() && orderData.AssignedID == cfg.MyID && now-orderData.AssignedTime > cfg.BiddingTime {
 				simRequests[orderType][floor] = true
 			}
 		}

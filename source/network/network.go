@@ -43,8 +43,12 @@ func StartNetwork(myID int) {
 				continue
 			}
 
+			//simulate packet loss
+			if time.Now().UnixNano()%2 == 0 {
+				continue
+			}
+
 			mergeIncomingWorld(msg)
-			db.ReceivedMsg()
 			// fmt.Println("Got msg at time", time.Now())
 		}
 	}()

@@ -12,12 +12,12 @@ func GetMyCab(id int) OrderType {
 	return OrderType(id + int(CabFirst))
 }
 
-const INF = 2147483647 // 32 bit signed integer limit
+const INF = 999000
 
 type OrderData struct {
 	Version int `json:"v"`
 
-	// only relevant in confirmed state
+	// only relevant if active
 	AssignedID   int   `json:"a"`
 	Cost         int   `json:"c"`
 	AssignedTime int64 `json:"t"`
