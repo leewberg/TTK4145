@@ -11,6 +11,7 @@ var maxIter = 100
 
 func CostFunction(orderType t.OrderType, orderFloor int) int {
 	// finds the cost for the elevator to do a spesific order, by simulating execution
+	// translated from https://github.com/TTK4145/Project-resources
 	elevData := LocalElevator // shallow copy should be sufficient
 	duration := 0
 	ourCab := t.GetMyCab(cfg.MyID)
