@@ -37,7 +37,7 @@ func StartNetwork(myID int) {
 		}
 	}()
 
-	go func() { // reciver
+	go func() { // receiver
 		for msg := range inbox {
 			if msg.Sender == netID {
 				continue
@@ -80,11 +80,11 @@ func snapshotPeerSeen() []int64 {
 }
 
 func snapshotOrders() [][]t.OrderData {
-	nTypes := cfg.NumElevators + 2 // down, up and one cab per elevator
+	typeCount := cfg.NumElevators + 2 // down, up and one cab per elevator
 
-	out := make([][]t.OrderData, nTypes)
+	out := make([][]t.OrderData, typeCount)
 
-	for ot := range nTypes {
+	for ot := range typeCount {
 		out[ot] = make([]t.OrderData, cfg.NumFloors)
 		for floor := range cfg.NumFloors {
 			out[ot][floor] = db.GetOrder(t.OrderType(ot), floor)
@@ -100,11 +100,11 @@ func mergeIncomingWorld(in t.WorldView) {
 	}
 
 	// Merge orders
-	nTypes := cfg.NumElevators + 2
-	if len(in.Orders) < nTypes {
+	typeCount := cfg.NumElevators + 2
+	if len(in.Orders) < typeCount {
 		return
 	}
-	for ot := range nTypes {
+	for ot := range typeCount {
 		if len(in.Orders[ot]) < cfg.NumFloors {
 			continue
 		}
