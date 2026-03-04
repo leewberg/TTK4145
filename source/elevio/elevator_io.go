@@ -51,7 +51,7 @@ func Init(addr string, numFloors int) { //may need to change - initiated for tcp
 	_initialized = true
 }
 
-func SetMotorDirection(dir MotorDirection) {
+func setMotorDirection(dir MotorDirection) {
 	write([4]byte{1, byte(dir), 0, 0})
 }
 
@@ -63,7 +63,7 @@ func SetFloorIndicator(floor int) {
 	write([4]byte{3, byte(floor), 0, 0})
 }
 
-func SetDoorOpenLamp(value bool) {
+func setDoorOpenLamp(value bool) {
 	write([4]byte{4, toByte(value), 0, 0})
 }
 
@@ -116,7 +116,7 @@ func PollObstructionSwitch(receiver chan<- bool) {
 	prev := false
 	for {
 		time.Sleep(_pollRate)
-		v := GetObstruction()
+		v := getObstruction()
 		if v != prev {
 			receiver <- v
 		}
@@ -143,7 +143,7 @@ func GetStop() bool {
 	return toBool(a[1])
 }
 
-func GetObstruction() bool {
+func getObstruction() bool {
 	a := read([4]byte{9, 0, 0, 0})
 	return toBool(a[1])
 }

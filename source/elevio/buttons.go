@@ -30,19 +30,19 @@ func ButtonRoutine(e *elevator) {
 
 		case a := <-drv_floors:
 			if a != -1 { //update floor for elevator object if in a floor and not between floors
-				if e.Is_between_floors && e.In_floor != a { //moved into a new floor
+				if e.is_between_floors && e.in_floor != a { //moved into a new floor
 					db.Heartbeat()
 				}
 
-				e.In_floor = a
+				e.in_floor = a
 				SetFloorIndicator(a)
-				e.Is_between_floors = false
+				e.is_between_floors = false
 
 			} else {
-				e.Is_between_floors = true
+				e.is_between_floors = true
 			}
 		}
-		if GetObstruction() {
+		if getObstruction() {
 			e.doorOpenTime = time.Now()
 		}
 	}
