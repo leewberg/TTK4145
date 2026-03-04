@@ -10,10 +10,9 @@ import (
 type elevator struct {
 	state             t.Elev_states
 	in_floor          int
-	id                int
 	direction         MotorDirection //only up or down, never stop
 	is_between_floors bool
-	doorOpenTime      time.Time
+	doorOpenedTime    time.Time
 }
 
 var LocalElevator elevator
@@ -36,11 +35,10 @@ func (e *elevator) Elev_routine() {
 
 func (e *elevator) Init() {
 	e.state = t.ELEV_BOOT
-	e.id = cfg.MyID //not really needed?
-	e.doorOpenTime = time.Now()
+	e.doorOpenedTime = time.Now()
 
 	setDoorOpenLamp(false)
-	SetStopLamp(false)
+	setStopLamp(false)
 
 	a := GetFloor()
 	if a == -1 {
@@ -50,7 +48,7 @@ func (e *elevator) Init() {
 
 	e.direction = MD_Up
 	setDoorOpenLamp(false)
-	SetStopLamp(false)
+	setStopLamp(false)
 
 	e.state = t.ELEV_IDLE
 }
@@ -58,7 +56,7 @@ func (e *elevator) Init() {
 func (e *elevator) DoorOpen() {
 	setMotorDirection(MD_Stop)
 	setDoorOpenLamp(true)
-	if time.Since(e.doorOpenTime) > cfg.DoorOpenTime*time.Millisecond {
+	if time.Since(e.doorOpenedTime) > cfg.DoorOpenTime*time.Millisecond {
 		orderMatrix := db.GetOrderMatrix(t.GetMyCab(cfg.MyID))
 		if isOrder(mdToOrdertype(e.direction), e.in_floor, orderMatrix) {
 			db.ClearOrder(mdToOrdertype(e.direction), e.in_floor)
@@ -87,9 +85,9 @@ func (e *elevator) Run() {
 	setMotorDirection(e.direction)
 	if !e.is_between_floors {
 		orderMatrix := db.GetOrderMatrix(t.GetMyCab(cfg.MyID))
-		if isOrder(mdToOrdertype(e.direction), e.in_floor, orderMatrix) || isOrder(t.OrderType(e.id), e.in_floor, orderMatrix) {
+		if isOrder(mdToOrdertype(e.direction), e.in_floor, orderMatrix) || isOrder(t.OrderType(cfg.MyID), e.in_floor, orderMatrix) {
 			e.state = t.ELEV_DOOR_OPEN
-			e.doorOpenTime = time.Now()
+			e.doorOpenedTime = time.Now()
 		} else {
 			e.state = t.ELEV_IDLE
 		}
@@ -107,9 +105,9 @@ func (e *elevator) Idle() {
 		return
 	} else {
 		e.direction = e.direction * (-1)
-		if isOrder(mdToOrdertype(e.direction), e.in_floor, orderMatrix) || isOrder(t.OrderType(e.id), e.in_floor, orderMatrix) {
+		if isOrder(mdToOrdertype(e.direction), e.in_floor, orderMatrix) || isOrder(t.OrderType(cfg.MyID), e.in_floor, orderMatrix) {
 			e.state = t.ELEV_DOOR_OPEN
-			e.doorOpenTime = time.Now()
+			e.doorOpenedTime = time.Now()
 		}
 	}
 	setMotorDirection(MD_Stop)

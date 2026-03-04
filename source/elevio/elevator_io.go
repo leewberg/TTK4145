@@ -67,7 +67,7 @@ func setDoorOpenLamp(value bool) {
 	write([4]byte{4, toByte(value), 0, 0})
 }
 
-func SetStopLamp(value bool) {
+func setStopLamp(value bool) {
 	write([4]byte{5, toByte(value), 0, 0})
 }
 

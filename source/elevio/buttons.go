@@ -43,7 +43,7 @@ func ButtonRoutine(e *elevator) {
 			}
 		}
 		if getObstruction() {
-			e.doorOpenTime = time.Now()
+			e.doorOpenedTime = time.Now()
 		}
 	}
 
