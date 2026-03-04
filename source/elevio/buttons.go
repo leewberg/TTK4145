@@ -9,7 +9,7 @@ import (
 )
 
 func ButtonRoutine(e *elevator) {
-	var drv_buttons = make(chan ButtonEvent)
+	var drv_buttons = make(chan t.ButtonEvent)
 	var drv_floors = make(chan int)
 	var drv_obstr = make(chan bool)
 	go PollButtons(drv_buttons)
@@ -20,7 +20,7 @@ func ButtonRoutine(e *elevator) {
 		select {
 		case a := <-drv_buttons: //hall up, down, or ANY cab button is pressed
 			fmt.Printf("%+v\n", a)
-			if a.Button == BT_HallDown || a.Button == BT_HallUp {
+			if a.Button == t.BT_HallDown || a.Button == t.BT_HallUp {
 				db.ActivateOrder(t.OrderType(a.Button), a.Floor)
 
 			} else { // cab order: adjust to which panel we order from

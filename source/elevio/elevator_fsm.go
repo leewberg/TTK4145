@@ -10,7 +10,7 @@ import (
 type elevator struct {
 	state             t.Elev_states
 	in_floor          int
-	direction         MotorDirection //only up or down, never stop
+	direction         t.MotorDirection //only up or down, never stop
 	is_between_floors bool
 	doorOpenedTime    time.Time
 }
@@ -44,11 +44,11 @@ func (e *elevator) Init() {
 
 	a := GetFloor()
 	if a == -1 {
-		setMotorDirection(MD_Down)
+		setMotorDirection(t.MD_Down)
 		return
 	}
 
-	e.direction = MD_Up
+	e.direction = t.MD_Up
 	setDoorOpenLamp(false)
 	setStopLamp(false)
 
@@ -56,7 +56,7 @@ func (e *elevator) Init() {
 }
 
 func (e *elevator) doorOpen() {
-	setMotorDirection(MD_Stop)
+	setMotorDirection(t.MD_Stop)
 	setDoorOpenLamp(true)
 	if time.Since(e.doorOpenedTime) > cfg.DoorOpenTime*time.Millisecond {
 		orderMatrix := db.GetOrderMatrix(t.GetMyCab(cfg.MyID))
@@ -70,7 +70,7 @@ func (e *elevator) doorOpen() {
 
 		if !getObstruction() { //last check before exiting door-open state
 			dir := chooseDirection(*e, orderMatrix)
-			if !(dir == MD_Stop) {
+			if !(dir == t.MD_Stop) {
 				setDoorOpenLamp(false)
 				e.direction = dir
 				e.state = t.ELEV_RUNNING
@@ -101,7 +101,7 @@ func (e *elevator) idle() {
 	orderMatrix := db.GetOrderMatrix(t.GetMyCab(cfg.MyID))
 	dir := chooseDirection(*e, orderMatrix)
 
-	if !(dir == MD_Stop) {
+	if !(dir == t.MD_Stop) {
 		e.direction = dir
 		e.state = t.ELEV_RUNNING
 		return
@@ -112,5 +112,5 @@ func (e *elevator) idle() {
 			e.doorOpenedTime = time.Now()
 		}
 	}
-	setMotorDirection(MD_Stop)
+	setMotorDirection(t.MD_Stop)
 }

@@ -17,9 +17,9 @@ func CostFunction(orderType t.OrderType, orderFloor int) int {
 
 	orderMatrix[orderType][orderFloor] = true
 	if elevData.in_floor == cfg.NumElevators-1 {
-		elevData.direction = MD_Down
+		elevData.direction = t.MD_Down
 	} else if elevData.in_floor == 0 {
-		elevData.direction = MD_Up
+		elevData.direction = t.MD_Up
 	}
 
 	// initial considerations
@@ -55,13 +55,13 @@ func CostFunction(orderType t.OrderType, orderFloor int) int {
 func clearMatrixOrders(elevData elevator, orderMatrix map[t.OrderType][]bool) {
 	orderMatrix[t.GetMyCab(cfg.MyID)][elevData.in_floor] = false
 	switch elevData.direction {
-	case MD_Up:
+	case t.MD_Up:
 		if orderMatrix[t.HallUp][elevData.in_floor] {
 			orderMatrix[t.HallUp][elevData.in_floor] = false
 		} else if !requestsAbove(elevData, orderMatrix) {
 			orderMatrix[t.HallDown][elevData.in_floor] = false
 		}
-	case MD_Down:
+	case t.MD_Down:
 		if orderMatrix[t.HallDown][elevData.in_floor] {
 			orderMatrix[t.HallDown][elevData.in_floor] = false
 		} else if !requestsBelow(elevData, orderMatrix) {
@@ -79,12 +79,12 @@ func elevShouldStop(elevData elevator, orderMatrix map[t.OrderType][]bool) (shou
 	ourCab := t.GetMyCab(cfg.MyID)
 
 	switch elevData.direction {
-	case MD_Up:
+	case t.MD_Up:
 		return (orderMatrix[t.HallUp][elevData.in_floor] ||
 			orderMatrix[ourCab][elevData.in_floor] ||
 			!requestsAbove(elevData, orderMatrix) ||
 			elevData.in_floor >= cfg.NumFloors-1)
-	case MD_Down:
+	case t.MD_Down:
 		return (orderMatrix[t.HallDown][elevData.in_floor] ||
 			orderMatrix[ourCab][elevData.in_floor] ||
 			!requestsBelow(elevData, orderMatrix) ||
