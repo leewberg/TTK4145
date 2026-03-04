@@ -38,7 +38,7 @@ func CostFunction(orderType t.OrderType, orderFloor int) int {
 	case t.ELEV_DOOR_OPEN:
 		duration -= cfg.DoorOpenTime / 2
 	default:
-		elevData.Direction, _ = ChooseDirection(elevData, simRequests, duration)
+		elevData.Direction = ChooseDirection(elevData, simRequests)
 	}
 	if elevData.Is_between_floors {
 		duration += cfg.TravelTime / 2
@@ -54,7 +54,7 @@ func CostFunction(orderType t.OrderType, orderFloor int) int {
 			if !simRequests[orderType][orderFloor] {
 				return duration
 			}
-			elevData.Direction, _ = ChooseDirection(elevData, simRequests, duration)
+			elevData.Direction = ChooseDirection(elevData, simRequests)
 		}
 		elevData.In_floor += int(elevData.Direction)
 		duration += cfg.TravelTime

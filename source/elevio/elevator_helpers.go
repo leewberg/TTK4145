@@ -2,9 +2,7 @@ package elevio
 
 import (
 	cfg "heislabb/source/config"
-	db "heislabb/source/database"
 	t "heislabb/source/types"
-	"time"
 )
 
 func mdToOrdertype(dir MotorDirection) t.OrderType {
@@ -21,28 +19,28 @@ func isOrder(dir t.OrderType, floor int, simRequests map[t.OrderType][]bool) boo
 	return simRequests[dir][floor]
 }
 
-func ChooseDirection(elevData elevator, simRequests map[t.OrderType][]bool, duration int) (MotorDirection, int) {
+func ChooseDirection(elevData elevator, simRequests map[t.OrderType][]bool) MotorDirection {
 	// check for orders in current direction of travel. if there are none, turn around
 	switch elevData.Direction {
 	case MD_Up:
 		if requestsAbove(elevData, simRequests) {
-			return MD_Up, duration
+			return MD_Up
 		} else if anyRequestsAtFloor(elevData.In_floor, simRequests) {
-			return MD_Stop, duration
+			return MD_Stop
 		} else if requestsBelow(elevData, simRequests) {
-			return MD_Down, duration + 5000
+			return MD_Down
 		} else {
-			return MD_Stop, duration
+			return MD_Stop
 		}
 	default:
 		if requestsBelow(elevData, simRequests) {
-			return MD_Down, duration
+			return MD_Down
 		} else if anyRequestsAtFloor(elevData.In_floor, simRequests) {
-			return MD_Stop, duration
+			return MD_Stop
 		} else if requestsAbove(elevData, simRequests) {
-			return MD_Up, duration + 5000
+			return MD_Up
 		} else {
-			return MD_Stop, duration
+			return MD_Stop
 		}
 	}
 }
@@ -67,19 +65,4 @@ func requestsBelow(elevData elevator, simRequests map[t.OrderType][]bool) bool {
 
 func anyRequestsAtFloor(floor int, simRequests map[t.OrderType][]bool) bool {
 	return isOrder(t.HallDown, floor, simRequests) || isOrder(t.GetMyCab(cfg.MyID), floor, simRequests) || isOrder(t.HallUp, floor, simRequests)
-}
-
-func makeSimReq(ourCab t.OrderType) map[t.OrderType][]bool {
-	simRequests := make(map[t.OrderType][]bool)
-	now := time.Now().UnixMilli()
-	for _, orderType := range []t.OrderType{t.HallUp, t.HallDown, ourCab} {
-		simRequests[orderType] = make([]bool, cfg.NumFloors)
-		for floor := range cfg.NumFloors {
-			orderData := db.GetOrder(orderType, floor)
-			if orderData.IsActive() && orderData.AssignedID == cfg.MyID && now-orderData.AssignedTime > cfg.BiddingTime {
-				simRequests[orderType][floor] = true
-			}
-		}
-	}
-	return simRequests
 }

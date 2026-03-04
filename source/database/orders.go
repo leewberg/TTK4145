@@ -116,3 +116,18 @@ func resolveCost(o t.OrderData) int {
 	}
 	return o.Cost + o.AssignedID
 }
+
+func GetOrderMatrix(ourCab t.OrderType) map[t.OrderType][]bool {
+	simRequests := make(map[t.OrderType][]bool)
+	now := time.Now().UnixMilli()
+	for _, orderType := range []t.OrderType{t.HallUp, t.HallDown, ourCab} {
+		simRequests[orderType] = make([]bool, cfg.NumFloors)
+		for floor := range cfg.NumFloors {
+			orderData := GetOrder(orderType, floor)
+			if orderData.IsActive() && orderData.AssignedID == cfg.MyID && now-orderData.AssignedTime > cfg.BiddingTime {
+				simRequests[orderType][floor] = true
+			}
+		}
+	}
+	return simRequests
+}
