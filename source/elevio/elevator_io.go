@@ -3,7 +3,7 @@ package elevio
 import (
 	"fmt"
 	cfg "heislabb/source/config"
-	"io"
+	// "io"
 	"net"
 	"sync"
 	"time"
