@@ -138,7 +138,8 @@ func read(in [4]byte) [4]byte {
 	}
 
 	var out [4]byte
-	_, err = _conn.Read(out[:])
+	n, err := _conn.Read(out[:])
+	if n != 4 {fmt.Println("[Worker] Warn: recived corrupt packet from elevator hardware")}
 	if err != nil {
 		panic("Lost connection to Elevator Server")
 	}
