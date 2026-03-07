@@ -47,7 +47,7 @@ func runReceiver(netID string, rxChan <-chan t.WorldView) {
 			continue
 		}
 
-		mergeIncomingWorld(msg)
+		mergeWorldSnapshot(msg)
 
 	}
 }
@@ -79,36 +79,39 @@ func snapshotPeerSeenTime() []int64 {
 }
 
 func snapshotAllOrders() [][]t.OrderData {
-	typeCount := cfg.NumElevators + 2 // down, up and one cab per elevator
+	orderTypeCount := cfg.NumElevators + 2 // down, up and one cab per elevator
 
-	out := make([][]t.OrderData, typeCount)
+	snapshot := make([][]t.OrderData, orderTypeCount)
 
-	for ot := range typeCount {
-		out[ot] = make([]t.OrderData, cfg.NumFloors)
+	for orderType := range orderTypeCount {
+
+		snapshot[orderType] = make([]t.OrderData, cfg.NumFloors)
+
 		for floor := range cfg.NumFloors {
-			out[ot][floor] = db.GetOrder(t.OrderType(ot), floor)
+			snapshot[orderType][floor] = db.GetOrder(t.OrderType(orderType), floor)
 		}
 	}
-	return out
+	return snapshot
 }
 
-func mergeIncomingWorld(in t.WorldView) {
+func mergeWorldSnapshot(in t.WorldView) {
 	// Merge peer liveness
 	for elevatorID := range in.PeerSeen {
 		db.MergePeerSnapshot(elevatorID, in.PeerSeen[elevatorID], in.PeerFail[elevatorID])
 	}
 
 	// Merge orders
-	typeCount := cfg.NumElevators + 2
-	if len(in.Orders) < typeCount {
+	expectedTypes := cfg.NumElevators + 2
+	if len(in.Orders) < expectedTypes {
 		return
 	}
-	for ot := range typeCount {
-		if len(in.Orders[ot]) < cfg.NumFloors {
+	for orderType := range expectedTypes {
+		
+		if len(in.Orders[orderType]) < cfg.NumFloors {
 			continue
 		}
 		for floor := range cfg.NumFloors {
-			db.MergeIncomingOrder(t.OrderType(ot), floor, in.Orders[ot][floor])
+			db.MergeIncomingOrder(t.OrderType(orderType), floor, in.Orders[orderType][floor])
 		}
 	}
 }
