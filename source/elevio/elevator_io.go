@@ -3,6 +3,7 @@ package elevio
 import (
 	"fmt"
 	cfg "heislabb/source/config"
+	"io"
 	"net"
 	"sync"
 	"time"
@@ -158,7 +159,11 @@ func read(in [4]byte) [4]byte {
 	}
 
 	var out [4]byte
-	_, err = _conn.Read(out[:])
+	n, err := _conn.Read(out[:])
+	// _, err = io.ReadFull(_conn, out[:])
+	if n != 4 {
+		panic("[worker]: read incorrect number of bytes from elevator hardware ")
+	}
 	if err != nil {
 		panic("Lost connection to Elevator Server")
 	}
